@@ -23,9 +23,7 @@ export default async function MainNavbar() {
   const cookiesStore = await cookies()
   const token = cookiesStore.get('token')?.value  
    
-  if(!data.length>0){
-    return <h1>Loading...</h1>
-  }
+ 
    
   
   return (
