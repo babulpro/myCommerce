@@ -1,40 +1,47 @@
- "use client"
-import Profile from '@/lib/utilityCom/Profile'
+"use client"
+
 import Link from 'next/link' 
 import { useEffect, useState } from 'react'
 
-const getData = async()=>{
-    try{
-        let res= await fetch(`${process.env.host}/api/category/getCategory`, { method: "GET" } ,{cache: 'no-store' })
-        const data = await res.json()
-        return data.data 
-
-    }
-    catch(e){
-        return []
-    }
-}
-
- 
-
 export default function MainNavbar() {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(true)
 
- const [data,setData]=useState([])
- useEffect(()=>{
-  (async()=>{
-    const response= await fetch(`/api/category/getCategory`, { method: "GET" } ,{cache: 'no-store' })
-        const data = await response.json() 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true)
+        // Fixed: Properly combined fetch options
+        const response = await fetch('/api/category/getCategory', {
+          method: "GET",
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories')
+        }
+        
+        const result = await response.json()
+        setData(result.data || [])
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        setData([])
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    setData(data.data)
-  }
-)()
- },[data])
-   
- 
-   console.log(data)
- 
-   
-  
+    fetchCategories()
+  }, []) // Removed 'data' from dependencies to prevent infinite loop
+
+  // Optional: Add a separate effect for debugging
+  useEffect(() => {
+    console.log('Categories data:', data)
+  }, [data])
+
   return (
     <div className="w-full">
       <div className="fixed top-0 z-50 bg-white border-b border-gray-200 shadow-md navbar">
@@ -53,17 +60,22 @@ export default function MainNavbar() {
                 <details>
                   <summary className="py-2 font-medium text-gray-800 hover:text-slate-600">Categories</summary>
                   <ul className="bg-white border-t border-gray-100">
-                    
-                    { data.length>0 ?
-
-                        data.map((value,index)=>{
-                          return(
-
-                            <li key={index} ><Link href={`/pages/categoryPage/${value.name}`} className="w-full py-2 text-gray-600 hover:text-slate-600 hover:bg-slate-50">{value.name}</Link></li>
-                          )
-                        }):<h1></h1>
-                    }
-                    
+                    {loading ? (
+                      <li><span className="py-2 text-gray-600">Loading...</span></li>
+                    ) : data.length > 0 ? (
+                      data.map((value, index) => (
+                        <li key={index}>
+                          <Link 
+                            href={`/pages/categoryPage/${value.name}?id=${value.id}`}
+                            className="w-full py-2 text-gray-600 hover:text-slate-600 hover:bg-slate-50"
+                          >
+                            {value.name}
+                          </Link>
+                        </li>
+                      ))
+                    ) : (
+                      <li><span className="py-2 text-gray-600">No categories</span></li>
+                    )}
                   </ul>
                 </details>
               </li>
@@ -80,30 +92,32 @@ export default function MainNavbar() {
             <li><Link href={`/`} className="px-4 py-2 font-medium text-gray-700 transition-all rounded-lg hover:text-slate-600 hover:bg-slate-50">Products</Link></li>
             <li>
               <details>
-                <summary className="w-full px-4 py-2 font-medium text-gray-700 transition-all rounded-lg hover:text-slate-600">Categories</summary>
-                <ul className="bg-white border-t border-gray-100">
-                    { data.length>0 &&
-
-                        data.map((value,index)=>{
-                          return(
-
-                            <li key={index} ><Link href={`/pages/categoryPage/${value.name}?id=${value.id}`}  className="w-40 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-500 text-s">{value.name}</Link></li>
-                          )
-                        })
-                    }
-                    
-                  </ul>
+                <summary className="w-full px-4 py-2 font-medium text-gray-700 transition-all rounded-lg hover:text-slate-600">
+                  Categories
+                </summary>
+                <ul className="bg-white border-t border-gray-100 p-2 min-w-40">
+                  {loading ? (
+                    <li><span className="py-2 text-gray-600">Loading...</span></li>
+                  ) : data.length > 0 ? (
+                    data.map((value, index) => (
+                      <li key={index}>
+                        <Link 
+                          href={`/pages/categoryPage/${value.name}?id=${value.id}`}
+                          className="w-full py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                        >
+                          {value.name}
+                        </Link>
+                      </li>
+                    ))
+                  ) : (
+                    <li><span className="py-2 text-gray-600">No categories</span></li>
+                  )}
+                </ul>
               </details>
             </li>
             <li><a className="px-4 py-2 font-medium text-gray-700 transition-all rounded-lg hover:text-slate-600 hover:bg-slate-50">Deals</a></li>
           </ul>
         </div>
-
-        {/* profile */}
-       
-{/* 
-        {token?<Profile/>:''} */}
-        
       </div>
     </div>
   )
