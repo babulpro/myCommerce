@@ -5,10 +5,9 @@ import { cookies } from 'next/headers'
 
 const getData = async()=>{
     try{
-        let res= await fetch(`/api/category/getCategory`, { method: "GET" } ,{cache: 'force-cache' })
+        let res= await fetch(`http://localhost:3000/api/category/getCategory`, { method: "GET" } ,{cache: 'no-store' })
         const data = await res.json()
-        return data.data
-        console.log(data)
+        return data.data 
 
     }
     catch(e){
