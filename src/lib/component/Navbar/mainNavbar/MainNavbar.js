@@ -1,7 +1,7 @@
- 
+ "use client"
 import Profile from '@/lib/utilityCom/Profile'
-import Link from 'next/link'
-import { cookies } from 'next/headers'
+import Link from 'next/link' 
+import { useEffect, useState } from 'react'
 
 const getData = async()=>{
     try{
@@ -17,12 +17,21 @@ const getData = async()=>{
 
  
 
-export default async function MainNavbar() {
-  const data = await getData()
-  console.log('my data',data)
-  const cookiesStore = await cookies()
-  const token = cookiesStore.get('token')?.value  
+export default function MainNavbar() {
+
+ const [data,setData]=useState([])
+ useEffect(()=>{
+  (async()=>{
+    const response= await fetch(`/api/category/getCategory`, { method: "GET" } ,{cache: 'no-store' })
+        const data = await response.json() 
+
+    setData(data.data)
+  }
+)()
+ },[data])
    
+ 
+   console.log(data)
  
    
   
@@ -92,8 +101,8 @@ export default async function MainNavbar() {
 
         {/* profile */}
        
-
-        {token?<Profile/>:''}
+{/* 
+        {token?<Profile/>:''} */}
         
       </div>
     </div>
