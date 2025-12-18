@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model Address {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  city      String
+  country   String
+  createdAt DateTime @db.Date
+  firstName String
+  lastName  String
+  phone     String
+  state     String
+  street    String
+  updatedAt DateTime @db.Date
+  userId    String   @db.ObjectId
+  zipCode   String
+}
+
+model Cart {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @db.Date
+  updatedAt DateTime @db.Date
+  userId    String   @unique @db.ObjectId
+}
+
+model CartItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  cartId    String   @db.ObjectId
+  color     String
+  createdAt DateTime @db.Date
+  productId String   @db.ObjectId
+  quantity  BigInt
+  size      String
+  updatedAt DateTime @db.Date
+
+  @@unique([cartId, productId, size, color])
+}
+
+model Category {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @db.Date
+  name      String   @unique
+  updatedAt DateTime @db.Date
+}
+
+model Message {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model Order {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  addressId   String   @db.ObjectId
+  createdAt   DateTime @db.Date
+  status      String
+  totalAmount Float
+  updatedAt   DateTime @db.Date
+  userId      String   @db.ObjectId
+}
+
+model OrderItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  color     String
+  createdAt DateTime @db.Date
+  orderId   String   @db.ObjectId
+  price     Float
+  productId String   @db.ObjectId
+  quantity  BigInt
+  size      String
+  updatedAt DateTime @db.Date
+}
+
+model Product {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  categoryId      String   @db.ObjectId
+  color           String[]
+  createdAt       DateTime @db.Date
+  description     String
+  discountPercent Float
+  featured        Boolean
+  images          String[]
+  inventory       BigInt
+  name            String
+  price           Float
+  rating          Float
+  reviewCount     BigInt
+  size            String[]
+  type            String
+  updatedAt       DateTime @db.Date
+}
+
+model Review {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  comment   String
+  createdAt DateTime @db.Date
+  images    String[]
+  productId String   @db.ObjectId
+  rating    BigInt
+  updatedAt DateTime @db.Date
+  userId    String   @db.ObjectId
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt    DateTime @db.Date
+  expires      DateTime @db.Date
+  sessionToken String   @unique
+  updatedAt    DateTime @db.Date
+  userId       String   @db.ObjectId
+}
+
+model Transaction {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount        Float
+  createdAt     DateTime @db.Date
+  currency      String
+  orderId       String   @unique @db.ObjectId
+  paymentId     String
+  paymentMethod String
+  status        String
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @db.Date
+  email     String   @unique
+  name      String
+  password  String
+  role      String
+  updatedAt DateTime @db.Date
+}
+
+model Wishlist {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  productId Json?
+  /// Field referred in an index, but found no data to define the type.
+  userId    Json?
+
+  @@unique([userId, productId])
+}
