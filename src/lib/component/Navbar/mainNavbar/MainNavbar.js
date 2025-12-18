@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 
 const getData = async()=>{
     try{
-        let res= await fetch(`http://localhost:3000/api/category/getCategory`, { method: "GET" } ,{cache: 'force-cache' })
+        let res= await fetch(`/api/category/getCategory`, { method: "GET" } ,{cache: 'force-cache' })
         const data = await res.json()
         return data.data
 
@@ -21,6 +21,7 @@ export default async function MainNavbar() {
   const data = await getData()
   const cookiesStore = await cookies()
   const token = cookiesStore.get('token')?.value  
+   
    
   
   return (
@@ -41,6 +42,7 @@ export default async function MainNavbar() {
                 <details>
                   <summary className="py-2 font-medium text-gray-800 hover:text-slate-600">Categories</summary>
                   <ul className="bg-white border-t border-gray-100">
+                    
                     { data.length>0 ?
 
                         data.map((value,index)=>{
