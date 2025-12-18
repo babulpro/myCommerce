@@ -27,7 +27,7 @@ export default function MainNavbar() {
         const result = await response.json()
         setData(result.data || [])
       } catch (error) {
-        console.error('Error fetching categories:', error)
+        alert('Error fetching categories:', error)
         setData([])
       } finally {
         setLoading(false)
@@ -37,10 +37,7 @@ export default function MainNavbar() {
     fetchCategories()
   }, []) // Removed 'data' from dependencies to prevent infinite loop
 
-  // Optional: Add a separate effect for debugging
-  useEffect(() => {
-    console.log('Categories data:', data)
-  }, [data])
+   
 
   return (
     <div className="w-full">
@@ -59,7 +56,7 @@ export default function MainNavbar() {
               <li>
                 <details>
                   <summary className="py-2 font-medium text-gray-800 hover:text-slate-600">Categories</summary>
-                  <ul className="bg-white border-t border-gray-100">
+                  <ul className="bg-white border-t w-full border-gray-100">
                     {loading ? (
                       <li><span className="py-2 text-gray-600">Loading...</span></li>
                     ) : data.length > 0 ? (
@@ -95,7 +92,7 @@ export default function MainNavbar() {
                 <summary className="w-full px-4 py-2 font-medium text-gray-700 transition-all rounded-lg hover:text-slate-600">
                   Categories
                 </summary>
-                <ul className="bg-white border-t border-gray-100 p-2 min-w-40">
+                <ul className="bg-white border-t border-gray-100 p-2 min-w-48">
                   {loading ? (
                     <li><span className="py-2 text-gray-600">Loading...</span></li>
                   ) : data.length > 0 ? (

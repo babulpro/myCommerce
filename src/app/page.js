@@ -1,11 +1,11 @@
-import MainNavbar from "@/lib/component/Navbar/mainNavbar/MainNavbar";
-import Image from "next/image";
+import ProductsGrid from "@/lib/component/product/AllProduct/AllProduct";
 
+ 
 export default function Home() {
   return (
-    <div>
-      <MainNavbar/>
-      rajibs commerce site
+    <div className="mt-20">
+      home of knowledge
+      <ProductsGrid/>
     </div>
   );
 }
