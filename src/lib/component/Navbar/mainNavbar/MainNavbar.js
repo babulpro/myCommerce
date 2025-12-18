@@ -8,6 +8,7 @@ const getData = async()=>{
         let res= await fetch(`/api/category/getCategory`, { method: "GET" } ,{cache: 'force-cache' })
         const data = await res.json()
         return data.data
+        console.log(data)
 
     }
     catch(e){
@@ -19,9 +20,13 @@ const getData = async()=>{
 
 export default async function MainNavbar() {
   const data = await getData()
+  console.log('my data',data)
   const cookiesStore = await cookies()
   const token = cookiesStore.get('token')?.value  
    
+  if(!data.length>0){
+    return <h1>Loading...</h1>
+  }
    
   
   return (
