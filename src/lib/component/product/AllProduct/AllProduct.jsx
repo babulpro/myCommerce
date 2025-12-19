@@ -146,11 +146,11 @@ export default function ProductsGrid() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen" style={{
+      <div className="flex items-center justify-center min-h-screen" style={{
         background: "linear-gradient(to bottom, var(--primary-50), white)"
       }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 mx-auto mb-6" style={{
+          <div className="w-16 h-16 mx-auto mb-6 border-4 rounded-full animate-spin" style={{
             borderColor: "var(--primary-400)",
             borderTopColor: "var(--primary-600)"
           }}></div>
@@ -167,17 +167,17 @@ export default function ProductsGrid() {
       background: "linear-gradient(to bottom, var(--primary-25), white)"
     }}>
       {/* Mobile Filter Button */}
-      <div className="lg:hidden sticky top-0 z-40 p-4" style={{
+      <div className="sticky top-0 z-40 p-4 lg:hidden" style={{
         backgroundColor: "white",
         borderBottom: "1px solid var(--primary-100)",
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
       }}>
         <div className="container mx-auto">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <button
               id="filters-button"
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300"
+              className="flex items-center gap-2 px-4 py-2 font-medium transition-all duration-300 rounded-lg"
               style={{
                 background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
                 color: "white",
@@ -212,7 +212,7 @@ export default function ProductsGrid() {
 
       {/* Mobile Filters Overlay */}
       {showFilters && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50 flex items-start justify-center pt-16">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 bg-black bg-opacity-50 lg:hidden">
           <div 
             id="filters-panel"
             className="w-full max-w-md mx-4 rounded-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
@@ -222,7 +222,7 @@ export default function ProductsGrid() {
             }}
           >
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold" style={{ color: "var(--primary-800)" }}>
                   <span style={{ color: "var(--accent-600)" }}>✨</span> Filters
                 </h2>
@@ -258,13 +258,13 @@ export default function ProductsGrid() {
               <div className="space-y-6">
                 {/* Type Filter */}
                 <div>
-                  <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                  <h3 className="flex items-center gap-2 mb-3 font-semibold" style={{ color: "var(--primary-700)" }}>
                     <span style={{ color: "var(--accent-500)" }}>▸</span> Types
                   </h3>
                   <select 
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
-                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 font-medium transition-all"
+                    className="w-full px-4 py-3 font-medium transition-all border-2 rounded-xl focus:ring-2"
                     style={{
                       borderColor: "var(--primary-200)",
                       backgroundColor: "white",
@@ -281,7 +281,7 @@ export default function ProductsGrid() {
 
                 {/* Price Range */}
                 <div>
-                  <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                  <h3 className="flex items-center gap-2 mb-3 font-semibold" style={{ color: "var(--primary-700)" }}>
                     <span style={{ color: "var(--accent-500)" }}>💰</span> Price Range
                   </h3>
                   <div className="space-y-4">
@@ -317,7 +317,7 @@ export default function ProductsGrid() {
                 {/* Colors */}
                 {uniqueColors.length > 0 && (
                   <div>
-                    <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                    <h3 className="flex items-center gap-2 mb-3 font-semibold" style={{ color: "var(--primary-700)" }}>
                       <span style={{ color: "var(--accent-500)" }}>🎨</span> Colors
                     </h3>
                     <div className="flex flex-wrap gap-2">
@@ -325,7 +325,7 @@ export default function ProductsGrid() {
                         <button
                           key={color}
                           onClick={() => toggleColor(color)}
-                          className="px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                          className="px-3 py-2 text-sm font-medium transition-all duration-200 rounded-lg"
                           style={
                             selectedColors.includes(color)
                               ? {
@@ -350,7 +350,7 @@ export default function ProductsGrid() {
                 {/* Sizes */}
                 {uniqueSizes.length > 0 && (
                   <div>
-                    <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                    <h3 className="flex items-center gap-2 mb-3 font-semibold" style={{ color: "var(--primary-700)" }}>
                       <span style={{ color: "var(--accent-500)" }}>📏</span> Sizes
                     </h3>
                     <div className="flex flex-wrap gap-2">
@@ -358,7 +358,7 @@ export default function ProductsGrid() {
                         <button
                           key={size}
                           onClick={() => toggleSize(size)}
-                          className="w-10 h-10 flex items-center justify-center rounded-lg border font-medium transition-all duration-200"
+                          className="flex items-center justify-center w-10 h-10 font-medium transition-all duration-200 border rounded-lg"
                           style={
                             selectedSizes.includes(size)
                               ? {
@@ -386,15 +386,15 @@ export default function ProductsGrid() {
         </div>
       )}
 
-      <div className="container mx-auto px-1 py-2">
-        <div className="flex flex-col lg:flex-row gap-8">
+      <div className="container px-1 py-2 mx-auto">
+        <div className="flex flex-col gap-8 lg:flex-row">
           {/* Desktop Sidebar Filters - Hidden on mobile */}
           <div className="hidden lg:block lg:w-1/4">
-            <div id="filters-panel-desktop" className="rounded-2xl shadow-xl p-2 sticky top-24" style={{
+            <div id="filters-panel-desktop" className="sticky p-2 shadow-xl rounded-2xl top-24" style={{
               backgroundColor: "white",
               border: "1px solid var(--primary-100)"
             }}>
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold" style={{ color: "var(--primary-800)" }}>
                   <span style={{ color: "var(--accent-600)" }}>✨</span> Filters
                 </h2>
@@ -417,7 +417,7 @@ export default function ProductsGrid() {
                 <select 
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 font-medium transition-all"
+                  className="w-full px-4 py-3 font-medium transition-all border-2 rounded-xl focus:ring-2"
                   style={{
                     borderColor: "var(--primary-200)",
                     backgroundColor: "white",
@@ -442,7 +442,7 @@ export default function ProductsGrid() {
 
               {/* Price Range */}
               <div className="mb-6">
-                <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                <h3 className="flex items-center gap-2 mb-3 font-semibold" style={{ color: "var(--primary-700)" }}>
                   <span style={{ color: "var(--accent-500)" }}>💰</span> Price Range
                 </h3>
                 <div className="space-y-4">
@@ -494,7 +494,7 @@ export default function ProductsGrid() {
               {/* Colors */}
               {uniqueColors.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                  <h3 className="flex items-center gap-2 mb-3 font-semibold" style={{ color: "var(--primary-700)" }}>
                     <span style={{ color: "var(--accent-500)" }}>🎨</span> Colors
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -502,7 +502,7 @@ export default function ProductsGrid() {
                       <button
                         key={color}
                         onClick={() => toggleColor(color)}
-                        className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-95"
+                        className="px-4 py-2 text-sm font-medium transition-all duration-200 transform rounded-xl hover:scale-105 active:scale-95"
                         style={
                           selectedColors.includes(color)
                             ? {
@@ -537,7 +537,7 @@ export default function ProductsGrid() {
               {/* Sizes */}
               {uniqueSizes.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                  <h3 className="flex items-center gap-2 mb-3 font-semibold" style={{ color: "var(--primary-700)" }}>
                     <span style={{ color: "var(--accent-500)" }}>📏</span> Sizes
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -545,7 +545,7 @@ export default function ProductsGrid() {
                       <button
                         key={size}
                         onClick={() => toggleSize(size)}
-                        className="w-12 h-12 flex items-center justify-center rounded-xl border-2 font-bold transition-all duration-200 hover:scale-105 active:scale-95"
+                        className="flex items-center justify-center w-12 h-12 font-bold transition-all duration-200 border-2 rounded-xl hover:scale-105 active:scale-95"
                         style={
                           selectedSizes.includes(size)
                             ? {
@@ -579,15 +579,15 @@ export default function ProductsGrid() {
               )}
 
               {/* Product Count */}
-              <div className="mt-8 pt-6" style={{ borderTop: "1px solid var(--primary-100)" }}>
+              <div className="pt-6 mt-8" style={{ borderTop: "1px solid var(--primary-100)" }}>
                 <p style={{ color: "var(--primary-600)" }}>
-                  <span className="font-bold text-lg" style={{ color: "var(--primary-800)" }}>
+                  <span className="text-lg font-bold" style={{ color: "var(--primary-800)" }}>
                     {filteredProducts.length}
                   </span> of{" "}
                   <span className="font-bold" style={{ color: "var(--primary-800)" }}>
                     {products.length}
                   </span> products
-                  <span className="block text-sm mt-1" style={{ color: "var(--primary-500)" }}>
+                  <span className="block mt-1 text-sm" style={{ color: "var(--primary-500)" }}>
                     🎯 Perfect matches for you
                   </span>
                 </p>
@@ -598,20 +598,20 @@ export default function ProductsGrid() {
           {/* Main Content */}
           <div className="lg:w-3/4">
             {/* Sorting Bar - Updated for mobile */}
-            <div className="rounded-2xl shadow-lg p-4 lg:p-6 mb-8" style={{
+            <div className="p-4 mb-8 shadow-lg rounded-2xl lg:p-6" style={{
               backgroundColor: "white",
               border: "1px solid var(--primary-100)"
             }}>
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
                 <div style={{ color: "var(--primary-800)" }}>
-                  <span className="font-bold text-lg lg:text-xl">{filteredProducts.length}</span>
-                  <span className="font-medium ml-2" style={{ color: "var(--primary-600)" }}>
+                  <span className="text-lg font-bold lg:text-xl">{filteredProducts.length}</span>
+                  <span className="ml-2 font-medium" style={{ color: "var(--primary-600)" }}>
                     products found
                   </span>
                   {(selectedType !== "all" || selectedColors.length > 0 || selectedSizes.length > 0 || priceRange[0] > 0 || priceRange[1] < 5000) && (
                     <button 
                       onClick={clearFilters}
-                      className="ml-4 px-3 py-1 text-sm font-medium rounded-lg transition-colors hidden lg:inline-block"
+                      className="hidden px-3 py-1 ml-4 text-sm font-medium transition-colors rounded-lg lg:inline-block"
                       style={{
                         backgroundColor: "var(--primary-50)",
                         color: "var(--primary-700)"
@@ -624,7 +624,7 @@ export default function ProductsGrid() {
                   )}
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="font-medium hidden sm:block" style={{ color: "var(--primary-600)" }}>Sort by:</span>
+                  <span className="hidden font-medium sm:block" style={{ color: "var(--primary-600)" }}>Sort by:</span>
                   <select 
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
@@ -656,15 +656,15 @@ export default function ProductsGrid() {
 
             {/* Products Grid */}
             {filteredProducts.length === 0 ? (
-              <div className="text-center py-16 rounded-2xl shadow-lg" style={{
+              <div className="py-16 text-center shadow-lg rounded-2xl" style={{
                 backgroundColor: "white",
                 border: "1px solid var(--primary-100)"
               }}>
-                <div className="text-7xl mb-6">🔍</div>
-                <h3 className="text-2xl font-bold mb-3" style={{ color: "var(--primary-800)" }}>
+                <div className="mb-6 text-7xl">🔍</div>
+                <h3 className="mb-3 text-2xl font-bold" style={{ color: "var(--primary-800)" }}>
                   No products found
                 </h3>
-                <p className="mb-8 max-w-md mx-auto" style={{ color: "var(--primary-600)" }}>
+                <p className="max-w-md mx-auto mb-8" style={{ color: "var(--primary-600)" }}>
                   Try adjusting your filters or explore our full collection
                 </p>
                 <button 
@@ -685,13 +685,13 @@ export default function ProductsGrid() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
                 {filteredProducts.map((product) => {
                   const discountedPrice = calculateDiscountedPrice(product.price, product.discountPercent);
                   const isDiscounted = product.discountPercent > 0;
                   
                   return (
-                    <div key={product.id} className="group rounded-xl lg:rounded-2xl shadow-lg overflow-hidden transition-all duration-500 hover:-translate-y-2" style={{
+                    <div key={product.id} className="overflow-hidden transition-all duration-500 shadow-lg group rounded-xl lg:rounded-2xl hover:-translate-y-2" style={{
                       backgroundColor: "white",
                       border: "2px solid var(--primary-100)"
                     }}
@@ -703,24 +703,24 @@ export default function ProductsGrid() {
                     }}
                     >
                       {/* Product Image */}
-                      <div className="relative h-56 lg:h-72 overflow-hidden" style={{
+                      <div className="relative h-56 overflow-hidden lg:h-72" style={{
                         background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
                       }}>
                         <img 
                           src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
                           alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
                         />
                         
                         {/* Badges */}
-                        <div className="absolute top-3 lg:top-4 left-3 lg:left-4 flex flex-col gap-2">
-                          {product.featured && (
+                        <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
+                          {/* {product.featured && (
                             <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
                               background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
                             }}>
                               ⭐
                             </span>
-                          )}
+                          )} */}
                           {isDiscounted && (
                             <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
                               background: "linear-gradient(to right, var(--secondary-500), var(--secondary-600))"
@@ -749,16 +749,16 @@ export default function ProductsGrid() {
 
                       {/* Product Info */}
                       <div className="p-4 lg:p-6">
-                        <div className="mb-3 lg:mb-4">
+                        {/* <div className="mb-3 lg:mb-4">
                           <span className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs font-bold rounded-lg" style={{
                             background: "linear-gradient(to right, var(--primary-100), var(--primary-200))",
                             color: "var(--primary-700)"
                           }}>
                             {product.type?.toUpperCase() || "PRODUCT"}
                           </span>
-                        </div>
+                        </div> */}
                         
-                        <h3 className="text-lg lg:text-xl font-bold mb-2 lg:mb-3 line-clamp-1 transition-colors" style={{
+                        <h3 className="mb-2 text-lg font-bold transition-colors lg:text-xl lg:mb-3 line-clamp-1" style={{
                           color: "var(--primary-900)"
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.color = "var(--accent-600)"}
@@ -767,21 +767,21 @@ export default function ProductsGrid() {
                           {product.name}
                         </h3>
                         
-                        <p className="text-sm mb-4 lg:mb-5 line-clamp-2" style={{ color: "var(--primary-600)" }}>
+                        {/* <p className="mb-4 text-sm lg:mb-5 line-clamp-2" style={{ color: "var(--primary-600)" }}>
                           {product.description}
-                        </p>
+                        </p> */}
 
                         {/* Price */}
-                        <div className="flex items-center gap-2 lg:gap-3 mb-4 lg:mb-6">
+                        <div className="flex items-center gap-2 mb-4 lg:gap-3 lg:mb-6">
                           {isDiscounted ? (
                             <>
-                              <span className="text-xl lg:text-2xl font-bold" style={{ color: "var(--primary-900)" }}>
-                                ₹{discountedPrice.toFixed(2)}
+                              <span className="text-xl font-bold lg:text-2xl" style={{ color: "var(--primary-900)" }}>
+                                {discountedPrice.toFixed(2)}
                               </span>
-                              <span className="text-base lg:text-lg line-through" style={{ color: "var(--primary-500)" }}>
-                                ₹{product.price}
+                              <span className="text-base line-through lg:text-lg" style={{ color: "var(--primary-500)" }}>
+                                {product.price}
                               </span>
-                              <span className="px-2 py-1 text-xs font-bold rounded hidden lg:inline-block" style={{
+                              <span className="hidden px-2 py-1 text-xs font-bold rounded lg:inline-block" style={{
                                 backgroundColor: "var(--secondary-100)",
                                 color: "var(--secondary-700)"
                               }}>
@@ -789,24 +789,24 @@ export default function ProductsGrid() {
                               </span>
                             </>
                           ) : (
-                            <span className="text-xl lg:text-2xl font-bold" style={{ color: "var(--primary-900)" }}>
-                              ₹{product.price}
+                            <span className="text-xl font-bold lg:text-2xl" style={{ color: "var(--primary-900)" }}>
+                              {product.price}
                             </span>
                           )}
                         </div>
 
-                        {/* Colors & Sizes */}
-                        <div className="space-y-3 lg:space-y-4 mb-4 lg:mb-6">
+                        {/* Colors & Sizes
+                        <div className="mb-4 space-y-3 lg:space-y-4 lg:mb-6">
                           {product.color?.length > 0 && (
                             <div>
-                              <span className="text-xs font-medium mb-2 block" style={{ color: "var(--primary-500)" }}>
+                              <span className="block mb-2 text-xs font-medium" style={{ color: "var(--primary-500)" }}>
                                 Colors:
                               </span>
                               <div className="flex gap-2">
                                 {product.color.slice(0, 4).map((color, idx) => (
                                   <div 
                                     key={idx}
-                                    className="w-6 h-6 lg:w-8 lg:h-8 rounded-full border-2"
+                                    className="w-6 h-6 border-2 rounded-full lg:w-8 lg:h-8"
                                     style={{ 
                                       backgroundColor: color.toLowerCase(),
                                       borderColor: "white",
@@ -816,7 +816,7 @@ export default function ProductsGrid() {
                                   />
                                 ))}
                                 {product.color.length > 4 && (
-                                  <div className="w-6 h-6 lg:w-8 lg:h-8 flex items-center justify-center text-xs rounded-full font-bold" style={{
+                                  <div className="flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full lg:w-8 lg:h-8" style={{
                                     backgroundColor: "var(--primary-100)",
                                     color: "var(--primary-700)"
                                   }}>
@@ -829,7 +829,7 @@ export default function ProductsGrid() {
                           
                           {product.size?.length > 0 && (
                             <div>
-                              <span className="text-xs font-medium mb-2 block" style={{ color: "var(--primary-500)" }}>
+                              <span className="block mb-2 text-xs font-medium" style={{ color: "var(--primary-500)" }}>
                                 Sizes:
                               </span>
                               <div className="flex gap-2">
@@ -857,7 +857,7 @@ export default function ProductsGrid() {
                               </div>
                             </div>
                           )}
-                        </div>
+                        </div> */}
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 lg:gap-3">
@@ -875,7 +875,7 @@ export default function ProductsGrid() {
                           >
                             🛒 Add
                           </button>
-                          <button className="px-4 lg:px-6 py-2 lg:py-3 border-2 rounded-lg lg:rounded-xl font-medium transition-all duration-300 text-sm lg:text-base"
+                          <button className="px-4 py-2 text-sm font-medium transition-all duration-300 border-2 rounded-lg lg:px-6 lg:py-3 lg:rounded-xl lg:text-base"
                             style={{
                               borderColor: "var(--primary-200)",
                               color: "var(--primary-700)"
@@ -908,8 +908,8 @@ export default function ProductsGrid() {
       <div className="py-10 mt-12" style={{
         background: "linear-gradient(to right, var(--primary-800), var(--primary-900))"
       }}>
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-lg mb-2" style={{ color: "var(--primary-200)" }}>
+        <div className="container px-4 mx-auto text-center">
+          <p className="mb-2 text-lg" style={{ color: "var(--primary-200)" }}>
             <span className="font-bold text-white">NextShop</span> • Premium Shopping Experience
           </p>
           <p style={{ color: "var(--primary-300)" }}>

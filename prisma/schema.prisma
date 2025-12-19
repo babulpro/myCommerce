@@ -63,8 +63,8 @@ model Product{
     char        String[]
     price       Float
     images      String[]
-    brand       String
-    currency    String
+    brand       String?
+    currency    String?
     inventory   Int      @default(0)
     featured    Boolean  @default(false)
     rating      Float    @default(0)
@@ -72,7 +72,7 @@ model Product{
     tags        String[]
     size        String[]
     color       String[]
-    type        String
+    type        String?
     reviews    Review[]
     wishlist    Wishlist[]  
     orders     OrderItem[]
