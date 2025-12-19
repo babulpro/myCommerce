@@ -11,6 +11,7 @@ export default function ProductsGrid() {
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
+  const [showFilters, setShowFilters] = useState(false); // New state for mobile filters
 
   useEffect(() => { 
     const fetchProducts = async () => {
@@ -124,37 +125,288 @@ export default function ProductsGrid() {
     return price - (price * discountPercent / 100);
   };
 
+  // Close filters when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showFilters && window.innerWidth < 1024) {
+        const filtersPanel = document.getElementById("filters-panel");
+        const filtersButton = document.getElementById("filters-button");
+        
+        if (filtersPanel && 
+            !filtersPanel.contains(event.target) && 
+            !filtersButton?.contains(event.target)) {
+          setShowFilters(false);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showFilters]);
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center min-h-screen" style={{
+        background: "linear-gradient(to bottom, var(--primary-50), white)"
+      }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading products...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 mx-auto mb-6" style={{
+            borderColor: "var(--primary-400)",
+            borderTopColor: "var(--primary-600)"
+          }}></div>
+          <p className="font-medium" style={{ color: "var(--primary-700)" }}>
+            Loading amazing products...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-4">Discover Amazing Products</h1>
-          <p className="text-lg opacity-90">Find the perfect items that match your style</p>
+    <div className="min-h-screen" style={{
+      background: "linear-gradient(to bottom, var(--primary-25), white)"
+    }}>
+      {/* Mobile Filter Button */}
+      <div className="lg:hidden sticky top-0 z-40 p-4" style={{
+        backgroundColor: "white",
+        borderBottom: "1px solid var(--primary-100)",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+      }}>
+        <div className="container mx-auto">
+          <div className="flex justify-between items-center">
+            <button
+              id="filters-button"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300"
+              style={{
+                background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
+                color: "white",
+                boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = "0 6px 12px -2px rgba(14, 165, 233, 0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(14, 165, 233, 0.2)";
+              }}
+            >
+              {showFilters ? (
+                <>
+                  <span>✕</span>
+                  <span>Close Filters</span>
+                </>
+              ) : (
+                <>
+                  <span>🔍</span>
+                  <span>Filters ({selectedColors.length + selectedSizes.length + (selectedType !== "all" ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 5000 ? 1 : 0)})</span>
+                </>
+              )}
+            </button>
+            
+            <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
+              {filteredProducts.length} products
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Filters */}
-          <div className="lg:w-1/4">
-            <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24">
+      {/* Mobile Filters Overlay */}
+      {showFilters && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50 flex items-start justify-center pt-16">
+          <div 
+            id="filters-panel"
+            className="w-full max-w-md mx-4 rounded-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
+            style={{
+              backgroundColor: "white",
+              border: "1px solid var(--primary-100)"
+            }}
+          >
+            <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-800">Filters</h2>
+                <h2 className="text-xl font-bold" style={{ color: "var(--primary-800)" }}>
+                  <span style={{ color: "var(--accent-600)" }}>✨</span> Filters
+                </h2>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={clearFilters}
+                    className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                    style={{
+                      backgroundColor: "var(--primary-50)",
+                      color: "var(--primary-700)"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--primary-100)"}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary-50)"}
+                  >
+                    Clear All
+                  </button>
+                  <button 
+                    onClick={() => setShowFilters(false)}
+                    className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                    style={{
+                      backgroundColor: "var(--primary-50)",
+                      color: "var(--primary-700)"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--primary-100)"}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary-50)"}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile Filter Content */}
+              <div className="space-y-6">
+                {/* Type Filter */}
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                    <span style={{ color: "var(--accent-500)" }}>▸</span> Types
+                  </h3>
+                  <select 
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value)}
+                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 font-medium transition-all"
+                    style={{
+                      borderColor: "var(--primary-200)",
+                      backgroundColor: "white",
+                      color: "var(--primary-800)"
+                    }}
+                  >
+                    {uniqueTypes.map(type => (
+                      <option key={type} value={type}>
+                        {type === "all" ? "All Types" : type.charAt(0).toUpperCase() + type.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Price Range */}
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                    <span style={{ color: "var(--accent-500)" }}>💰</span> Price Range
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      <input
+                        type="number"
+                        value={priceRange[0]}
+                        onChange={(e) => e.target.value <= 0 ? setPriceRange([1, priceRange[1]]) : setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                        className="w-1/2 px-4 py-2 border-2 rounded-lg"
+                        style={{
+                          borderColor: "var(--primary-200)",
+                          backgroundColor: "white",
+                          color: "var(--primary-800)"
+                        }}
+                        placeholder="Min"
+                      />
+                      <input
+                        type="number"
+                        value={priceRange[1]}
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                        className="w-1/2 px-4 py-2 border-2 rounded-lg"
+                        style={{
+                          borderColor: "var(--primary-200)",
+                          backgroundColor: "white",
+                          color: "var(--primary-800)"
+                        }}
+                        placeholder="Max"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Colors */}
+                {uniqueColors.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                      <span style={{ color: "var(--accent-500)" }}>🎨</span> Colors
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueColors.map(color => (
+                        <button
+                          key={color}
+                          onClick={() => toggleColor(color)}
+                          className="px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                          style={
+                            selectedColors.includes(color)
+                              ? {
+                                  background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
+                                  color: "white",
+                                  boxShadow: "0 2px 4px rgba(14, 165, 233, 0.2)"
+                                }
+                              : {
+                                  backgroundColor: "var(--primary-50)",
+                                  color: "var(--primary-700)",
+                                  border: "1px solid var(--primary-200)"
+                                }
+                          }
+                        >
+                          {color}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sizes */}
+                {uniqueSizes.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                      <span style={{ color: "var(--accent-500)" }}>📏</span> Sizes
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueSizes.map(size => (
+                        <button
+                          key={size}
+                          onClick={() => toggleSize(size)}
+                          className="w-10 h-10 flex items-center justify-center rounded-lg border font-medium transition-all duration-200"
+                          style={
+                            selectedSizes.includes(size)
+                              ? {
+                                  background: "linear-gradient(to bottom right, var(--accent-500), var(--accent-600))",
+                                  color: "white",
+                                  borderColor: "var(--accent-500)",
+                                  boxShadow: "0 2px 4px rgba(14, 165, 233, 0.2)"
+                                }
+                              : {
+                                  backgroundColor: "white",
+                                  color: "var(--primary-700)",
+                                  borderColor: "var(--primary-200)"
+                                }
+                          }
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="container mx-auto px-1 py-2">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Desktop Sidebar Filters - Hidden on mobile */}
+          <div className="hidden lg:block lg:w-1/4">
+            <div id="filters-panel-desktop" className="rounded-2xl shadow-xl p-2 sticky top-24" style={{
+              backgroundColor: "white",
+              border: "1px solid var(--primary-100)"
+            }}>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold" style={{ color: "var(--primary-800)" }}>
+                  <span style={{ color: "var(--accent-600)" }}>✨</span> Filters
+                </h2>
                 <button 
                   onClick={clearFilters}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                  style={{
+                    backgroundColor: "var(--primary-50)",
+                    color: "var(--primary-700)"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--primary-100)"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary-50)"}
                 >
                   Clear All
                 </button>
@@ -162,11 +414,23 @@ export default function ProductsGrid() {
 
               {/* Type Filter */}
               <div className="mb-6">
-                <h3 className="font-semibold text-gray-700 mb-3">Type</h3>
                 <select 
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 font-medium transition-all"
+                  style={{
+                    borderColor: "var(--primary-200)",
+                    backgroundColor: "white",
+                    color: "var(--primary-800)"
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "var(--accent-400)";
+                    e.target.style.boxShadow = "0 0 0 2px var(--accent-400)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "var(--primary-200)";
+                    e.target.style.boxShadow = "none";
+                  }}
                 >
                   {uniqueTypes.map(type => (
                     <option key={type} value={type}>
@@ -178,33 +442,49 @@ export default function ProductsGrid() {
 
               {/* Price Range */}
               <div className="mb-6">
-                <h3 className="font-semibold text-gray-700 mb-3">Price Range</h3>
+                <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                  <span style={{ color: "var(--accent-500)" }}>💰</span> Price Range
+                </h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">₹{priceRange[0]}</span>
-                    <span className="text-gray-600">₹{priceRange[1]}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="5000"
-                    value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <input
                       type="number"
                       value={priceRange[0]}
-                      onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
-                      className="w-1/2 px-3 py-2 border border-gray-300 rounded-lg"
+                      onChange={(e) => e.target.value <= 0 ? setPriceRange([1, priceRange[1]]) : setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                      className="w-1/2 px-4 py-2 border-2 rounded-lg"
+                      style={{
+                        borderColor: "var(--primary-200)",
+                        backgroundColor: "white",
+                        color: "var(--primary-800)"
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = "var(--accent-400)";
+                        e.target.style.boxShadow = "0 0 0 2px var(--accent-400)";
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = "var(--primary-200)";
+                        e.target.style.boxShadow = "none";
+                      }}
                       placeholder="Min"
                     />
                     <input
                       type="number"
                       value={priceRange[1]}
                       onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                      className="w-1/2 px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-1/2 px-4 py-2 border-2 rounded-lg"
+                      style={{
+                        borderColor: "var(--primary-200)",
+                        backgroundColor: "white",
+                        color: "var(--primary-800)"
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = "var(--accent-400)";
+                        e.target.style.boxShadow = "0 0 0 2px var(--accent-400)";
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = "var(--primary-200)";
+                        e.target.style.boxShadow = "none";
+                      }}
                       placeholder="Max"
                     />
                   </div>
@@ -214,17 +494,38 @@ export default function ProductsGrid() {
               {/* Colors */}
               {uniqueColors.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-semibold text-gray-700 mb-3">Colors</h3>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                    <span style={{ color: "var(--accent-500)" }}>🎨</span> Colors
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {uniqueColors.map(color => (
                       <button
                         key={color}
                         onClick={() => toggleColor(color)}
-                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-95"
+                        style={
                           selectedColors.includes(color)
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
+                            ? {
+                                background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
+                                color: "white",
+                                boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"
+                              }
+                            : {
+                                backgroundColor: "var(--primary-50)",
+                                color: "var(--primary-700)",
+                                border: "1px solid var(--primary-200)"
+                              }
+                        }
+                        onMouseEnter={(e) => {
+                          if (!selectedColors.includes(color)) {
+                            e.currentTarget.style.backgroundColor = "var(--primary-100)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!selectedColors.includes(color)) {
+                            e.currentTarget.style.backgroundColor = "var(--primary-50)";
+                          }
+                        }}
                       >
                         {color}
                       </button>
@@ -236,17 +537,39 @@ export default function ProductsGrid() {
               {/* Sizes */}
               {uniqueSizes.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-semibold text-gray-700 mb-3">Sizes</h3>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--primary-700)" }}>
+                    <span style={{ color: "var(--accent-500)" }}>📏</span> Sizes
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {uniqueSizes.map(size => (
                       <button
                         key={size}
                         onClick={() => toggleSize(size)}
-                        className={`w-10 h-10 flex items-center justify-center rounded-lg border font-medium transition-all ${
+                        className="w-12 h-12 flex items-center justify-center rounded-xl border-2 font-bold transition-all duration-200 hover:scale-105 active:scale-95"
+                        style={
                           selectedSizes.includes(size)
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-700 border-gray-300 hover:border-blue-500"
-                        }`}
+                            ? {
+                                background: "linear-gradient(to bottom right, var(--accent-500), var(--accent-600))",
+                                color: "white",
+                                borderColor: "var(--accent-500)",
+                                boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"
+                              }
+                            : {
+                                backgroundColor: "white",
+                                color: "var(--primary-700)",
+                                borderColor: "var(--primary-200)"
+                              }
+                        }
+                        onMouseEnter={(e) => {
+                          if (!selectedSizes.includes(size)) {
+                            e.currentTarget.style.borderColor = "var(--accent-400)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!selectedSizes.includes(size)) {
+                            e.currentTarget.style.borderColor = "var(--primary-200)";
+                          }
+                        }}
                       >
                         {size}
                       </button>
@@ -256,10 +579,17 @@ export default function ProductsGrid() {
               )}
 
               {/* Product Count */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <p className="text-gray-600">
-                  Showing <span className="font-bold text-blue-600">{filteredProducts.length}</span> of{" "}
-                  <span className="font-bold text-gray-800">{products.length}</span> products
+              <div className="mt-8 pt-6" style={{ borderTop: "1px solid var(--primary-100)" }}>
+                <p style={{ color: "var(--primary-600)" }}>
+                  <span className="font-bold text-lg" style={{ color: "var(--primary-800)" }}>
+                    {filteredProducts.length}
+                  </span> of{" "}
+                  <span className="font-bold" style={{ color: "var(--primary-800)" }}>
+                    {products.length}
+                  </span> products
+                  <span className="block text-sm mt-1" style={{ color: "var(--primary-500)" }}>
+                    🎯 Perfect matches for you
+                  </span>
                 </p>
               </div>
             </div>
@@ -267,33 +597,58 @@ export default function ProductsGrid() {
 
           {/* Main Content */}
           <div className="lg:w-3/4">
-            {/* Sorting Bar */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+            {/* Sorting Bar - Updated for mobile */}
+            <div className="rounded-2xl shadow-lg p-4 lg:p-6 mb-8" style={{
+              backgroundColor: "white",
+              border: "1px solid var(--primary-100)"
+            }}>
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-gray-700">
-                  <span className="font-medium">{filteredProducts.length} products found</span>
+                <div style={{ color: "var(--primary-800)" }}>
+                  <span className="font-bold text-lg lg:text-xl">{filteredProducts.length}</span>
+                  <span className="font-medium ml-2" style={{ color: "var(--primary-600)" }}>
+                    products found
+                  </span>
                   {(selectedType !== "all" || selectedColors.length > 0 || selectedSizes.length > 0 || priceRange[0] > 0 || priceRange[1] < 5000) && (
                     <button 
                       onClick={clearFilters}
-                      className="ml-3 text-sm text-blue-600 hover:text-blue-700 underline"
+                      className="ml-4 px-3 py-1 text-sm font-medium rounded-lg transition-colors hidden lg:inline-block"
+                      style={{
+                        backgroundColor: "var(--primary-50)",
+                        color: "var(--primary-700)"
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--primary-100)"}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary-50)"}
                     >
-                      Clear filters
+                      ✕ Clear filters
                     </button>
                   )}
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-gray-600">Sort by:</span>
+                  <span className="font-medium hidden sm:block" style={{ color: "var(--primary-600)" }}>Sort by:</span>
                   <select 
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="px-4 py-2.5 border-2 rounded-xl font-medium w-full sm:w-auto min-w-[180px]"
+                    style={{
+                      borderColor: "var(--primary-200)",
+                      backgroundColor: "white",
+                      color: "var(--primary-800)"
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "var(--accent-400)";
+                      e.target.style.boxShadow = "0 0 0 2px var(--accent-400)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "var(--primary-200)";
+                      e.target.style.boxShadow = "none";
+                    }}
                   >
-                    <option value="featured">Featured</option>
-                    <option value="price-low-high">Price: Low to High</option>
-                    <option value="price-high-low">Price: High to Low</option>
-                    <option value="name-asc">Name: A to Z</option>
-                    <option value="name-desc">Name: Z to A</option>
-                    <option value="discount">Best Discount</option>
+                    <option value="featured">✨ Featured</option>
+                    <option value="price-low-high">💰 Price: Low to High</option>
+                    <option value="price-high-low">💰 Price: High to Low</option>
+                    <option value="name-asc">🔤 Name: A to Z</option>
+                    <option value="name-desc">🔤 Name: Z to A</option>
+                    <option value="discount">🏷️ Best Discount</option>
                   </select>
                 </div>
               </div>
@@ -301,111 +656,171 @@ export default function ProductsGrid() {
 
             {/* Products Grid */}
             {filteredProducts.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-xl shadow-sm">
-                <div className="text-gray-400 text-6xl mb-4">😕</div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">No products found</h3>
-                <p className="text-gray-500 mb-6">Try adjusting your filters to find what you're looking for</p>
+              <div className="text-center py-16 rounded-2xl shadow-lg" style={{
+                backgroundColor: "white",
+                border: "1px solid var(--primary-100)"
+              }}>
+                <div className="text-7xl mb-6">🔍</div>
+                <h3 className="text-2xl font-bold mb-3" style={{ color: "var(--primary-800)" }}>
+                  No products found
+                </h3>
+                <p className="mb-8 max-w-md mx-auto" style={{ color: "var(--primary-600)" }}>
+                  Try adjusting your filters or explore our full collection
+                </p>
                 <button 
                   onClick={clearFilters}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="px-8 py-3 text-white rounded-xl hover:shadow-xl transition-all duration-300 font-bold transform hover:-translate-y-0.5"
+                  style={{
+                    background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
+                    boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = "0 10px 25px -5px rgba(14, 165, 233, 0.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(14, 165, 233, 0.2)";
+                  }}
                 >
-                  Clear All Filters
+                  ✨ Explore All Products
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
                 {filteredProducts.map((product) => {
                   const discountedPrice = calculateDiscountedPrice(product.price, product.discountPercent);
                   const isDiscounted = product.discountPercent > 0;
                   
                   return (
-                    <div key={product.id} className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                    <div key={product.id} className="group rounded-xl lg:rounded-2xl shadow-lg overflow-hidden transition-all duration-500 hover:-translate-y-2" style={{
+                      backgroundColor: "white",
+                      border: "2px solid var(--primary-100)"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0, 0, 0, 0.1)";
+                    }}
+                    >
                       {/* Product Image */}
-                      <div className="relative h-64 overflow-hidden">
+                      <div className="relative h-56 lg:h-72 overflow-hidden" style={{
+                        background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
+                      }}>
                         <img 
                           src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
                           alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
                         
                         {/* Badges */}
-                        <div className="absolute top-3 left-3 flex flex-col gap-2">
+                        <div className="absolute top-3 lg:top-4 left-3 lg:left-4 flex flex-col gap-2">
                           {product.featured && (
-                            <span className="px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
-                              Featured
+                            <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                              background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
+                            }}>
+                              ⭐
                             </span>
                           )}
                           {isDiscounted && (
-                            <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                              -{product.discountPercent}% OFF
+                            <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                              background: "linear-gradient(to right, var(--secondary-500), var(--secondary-600))"
+                            }}>
+                              🔥 {product.discountPercent}%
                             </span>
                           )}
                         </div>
                         
                         {/* Stock Indicator */}
                         {product.inventory <= 5 && product.inventory > 0 && (
-                          <div className="absolute bottom-3 left-3 px-3 py-1 bg-orange-500 text-white text-xs font-medium rounded-full">
-                            Only {product.inventory} left
+                          <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                            background: "linear-gradient(to right, var(--warning-500), var(--warning-600))"
+                          }}>
+                            ⚡ {product.inventory}
                           </div>
                         )}
                         {product.inventory === 0 && (
-                          <div className="absolute bottom-3 left-3 px-3 py-1 bg-gray-500 text-white text-xs font-medium rounded-full">
-                            Out of Stock
+                          <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                            background: "linear-gradient(to right, var(--neutral-500), var(--neutral-600))"
+                          }}>
+                            😔
                           </div>
                         )}
                       </div>
 
                       {/* Product Info */}
-                      <div className="p-5">
-                        <div className="mb-3">
-                          <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                      <div className="p-4 lg:p-6">
+                        <div className="mb-3 lg:mb-4">
+                          <span className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs font-bold rounded-lg" style={{
+                            background: "linear-gradient(to right, var(--primary-100), var(--primary-200))",
+                            color: "var(--primary-700)"
+                          }}>
                             {product.type?.toUpperCase() || "PRODUCT"}
                           </span>
                         </div>
                         
-                        <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-1">
+                        <h3 className="text-lg lg:text-xl font-bold mb-2 lg:mb-3 line-clamp-1 transition-colors" style={{
+                          color: "var(--primary-900)"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--accent-600)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--primary-900)"}
+                        >
                           {product.name}
                         </h3>
                         
-                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                        <p className="text-sm mb-4 lg:mb-5 line-clamp-2" style={{ color: "var(--primary-600)" }}>
                           {product.description}
                         </p>
 
                         {/* Price */}
-                        <div className="flex items-center gap-2 mb-4">
+                        <div className="flex items-center gap-2 lg:gap-3 mb-4 lg:mb-6">
                           {isDiscounted ? (
                             <>
-                              <span className="text-2xl font-bold text-gray-900">
+                              <span className="text-xl lg:text-2xl font-bold" style={{ color: "var(--primary-900)" }}>
                                 ₹{discountedPrice.toFixed(2)}
                               </span>
-                              <span className="text-lg text-gray-500 line-through">
+                              <span className="text-base lg:text-lg line-through" style={{ color: "var(--primary-500)" }}>
                                 ₹{product.price}
+                              </span>
+                              <span className="px-2 py-1 text-xs font-bold rounded hidden lg:inline-block" style={{
+                                backgroundColor: "var(--secondary-100)",
+                                color: "var(--secondary-700)"
+                              }}>
+                                Save {product.discountPercent}%
                               </span>
                             </>
                           ) : (
-                            <span className="text-2xl font-bold text-gray-900">
+                            <span className="text-xl lg:text-2xl font-bold" style={{ color: "var(--primary-900)" }}>
                               ₹{product.price}
                             </span>
                           )}
                         </div>
 
                         {/* Colors & Sizes */}
-                        <div className="space-y-3 mb-6">
+                        <div className="space-y-3 lg:space-y-4 mb-4 lg:mb-6">
                           {product.color?.length > 0 && (
                             <div>
-                              <span className="text-xs text-gray-500">Colors:</span>
-                              <div className="flex gap-1 mt-1">
-                                {product.color.slice(0, 3).map((color, idx) => (
+                              <span className="text-xs font-medium mb-2 block" style={{ color: "var(--primary-500)" }}>
+                                Colors:
+                              </span>
+                              <div className="flex gap-2">
+                                {product.color.slice(0, 4).map((color, idx) => (
                                   <div 
                                     key={idx}
-                                    className="w-6 h-6 rounded-full border"
-                                    style={{ backgroundColor: color.toLowerCase() }}
+                                    className="w-6 h-6 lg:w-8 lg:h-8 rounded-full border-2"
+                                    style={{ 
+                                      backgroundColor: color.toLowerCase(),
+                                      borderColor: "white",
+                                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                                    }}
                                     title={color}
                                   />
                                 ))}
-                                {product.color.length > 3 && (
-                                  <div className="w-6 h-6 flex items-center justify-center text-xs text-gray-500 bg-gray-100 rounded-full">
-                                    +{product.color.length - 3}
+                                {product.color.length > 4 && (
+                                  <div className="w-6 h-6 lg:w-8 lg:h-8 flex items-center justify-center text-xs rounded-full font-bold" style={{
+                                    backgroundColor: "var(--primary-100)",
+                                    color: "var(--primary-700)"
+                                  }}>
+                                    +{product.color.length - 4}
                                   </div>
                                 )}
                               </div>
@@ -414,19 +829,29 @@ export default function ProductsGrid() {
                           
                           {product.size?.length > 0 && (
                             <div>
-                              <span className="text-xs text-gray-500">Sizes:</span>
-                              <div className="flex gap-1 mt-1">
-                                {product.size.slice(0, 4).map((size, idx) => (
+                              <span className="text-xs font-medium mb-2 block" style={{ color: "var(--primary-500)" }}>
+                                Sizes:
+                              </span>
+                              <div className="flex gap-2">
+                                {product.size.slice(0, 5).map((size, idx) => (
                                   <span 
                                     key={idx}
-                                    className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded"
+                                    className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs rounded-lg font-medium border"
+                                    style={{
+                                      backgroundColor: "var(--primary-50)",
+                                      color: "var(--primary-700)",
+                                      borderColor: "var(--primary-200)"
+                                    }}
                                   >
                                     {size}
                                   </span>
                                 ))}
-                                {product.size.length > 4 && (
-                                  <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded">
-                                    +{product.size.length - 4}
+                                {product.size.length > 5 && (
+                                  <span className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs rounded-lg font-medium" style={{
+                                    backgroundColor: "var(--primary-100)",
+                                    color: "var(--primary-500)"
+                                  }}>
+                                    +{product.size.length - 5}
                                   </span>
                                 )}
                               </div>
@@ -435,12 +860,38 @@ export default function ProductsGrid() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-2">
-                          <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                            Add to Cart
+                        <div className="flex gap-2 lg:gap-3">
+                          <button className="flex-1 px-4 lg:px-6 py-2 lg:py-3 text-white rounded-lg lg:rounded-xl hover:shadow-xl transition-all duration-300 font-bold transform hover:-translate-y-0.5" 
+                            style={{
+                              background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
+                              boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.boxShadow = "0 10px 25px -5px rgba(14, 165, 233, 0.4)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(14, 165, 233, 0.2)";
+                            }}
+                          >
+                            🛒 Add
                           </button>
-                          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                            View Details
+                          <button className="px-4 lg:px-6 py-2 lg:py-3 border-2 rounded-lg lg:rounded-xl font-medium transition-all duration-300 text-sm lg:text-base"
+                            style={{
+                              borderColor: "var(--primary-200)",
+                              color: "var(--primary-700)"
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "var(--primary-50)";
+                              e.currentTarget.style.borderColor = "var(--accent-400)";
+                              e.currentTarget.style.color = "var(--accent-600)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                              e.currentTarget.style.borderColor = "var(--primary-200)";
+                              e.currentTarget.style.color = "var(--primary-700)";
+                            }}
+                          >
+                            👁️ View
                           </button>
                         </div>
                       </div>
@@ -454,10 +905,21 @@ export default function ProductsGrid() {
       </div>
 
       {/* Footer */}
-      <div className="bg-gray-800 text-white py-8 mt-12">
+      <div className="py-10 mt-12" style={{
+        background: "linear-gradient(to right, var(--primary-800), var(--primary-900))"
+      }}>
         <div className="container mx-auto px-4 text-center">
-          <p className="text-gray-400">© 2024 NextShop. All rights reserved.</p>
-          <p className="text-gray-500 text-sm mt-2">Showing {filteredProducts.length} amazing products for you</p>
+          <p className="text-lg mb-2" style={{ color: "var(--primary-200)" }}>
+            <span className="font-bold text-white">NextShop</span> • Premium Shopping Experience
+          </p>
+          <p style={{ color: "var(--primary-300)" }}>
+            Showing <span className="font-bold" style={{ color: "var(--accent-300)" }}>{filteredProducts.length}</span> amazing products curated just for you
+          </p>
+          <div className="flex justify-center gap-6 mt-4" style={{ color: "var(--primary-400)" }}>
+            <span>🔒 Secure Checkout</span>
+            <span>🚚 Free Shipping</span>
+            <span>🔄 Easy Returns</span>
+          </div>
         </div>
       </div>
     </div>

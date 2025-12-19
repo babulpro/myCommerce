@@ -20,10 +20,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <div className="mb-20 ">
+      <body>
+        <div className="mb-18 ">
           <MainNavbar/>
         </div>
         {children}
