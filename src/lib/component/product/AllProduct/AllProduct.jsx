@@ -1,4 +1,5 @@
 "use client"
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
 
 export default function ProductsGrid() {
@@ -703,49 +704,51 @@ export default function ProductsGrid() {
                     }}
                     >
                       {/* Product Image */}
-                      <div className="relative h-56 overflow-hidden lg:h-72" style={{
-                        background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
-                      }}>
-                        <img 
-                          src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
-                          alt={product.name}
-                          className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
-                        />
-                        
-                        {/* Badges */}
-                        <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
-                          {/* {product.featured && (
-                            <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                              background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
+                      <Link key={product.name} href={`/pages/product/detail/${product.id}`} className="block">
+                        <div className="relative h-56 overflow-hidden lg:h-72" style={{
+                          background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
+                        }}>
+                          <img 
+                            src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
+                            alt={product.name}
+                            className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                          />
+                          
+                          {/* Badges */}
+                          <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
+                            {/* {product.featured && (
+                              <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                                background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
+                              }}>
+                                ⭐
+                              </span>
+                            )} */}
+                            {isDiscounted && (
+                              <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                                background: "linear-gradient(to right, var(--secondary-500), var(--secondary-600))"
+                              }}>
+                                🔥 {product.discountPercent}%
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Stock Indicator */}
+                          {product.inventory <= 5 && product.inventory > 0 && (
+                            <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                              background: "linear-gradient(to right, var(--warning-500), var(--warning-600))"
                             }}>
-                              ⭐
-                            </span>
-                          )} */}
-                          {isDiscounted && (
-                            <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                              background: "linear-gradient(to right, var(--secondary-500), var(--secondary-600))"
-                            }}>
-                              🔥 {product.discountPercent}%
-                            </span>
+                              ⚡ {product.inventory}
+                            </div>
                           )}
-                        </div>
-                        
-                        {/* Stock Indicator */}
-                        {product.inventory <= 5 && product.inventory > 0 && (
-                          <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                            background: "linear-gradient(to right, var(--warning-500), var(--warning-600))"
-                          }}>
-                            ⚡ {product.inventory}
-                          </div>
-                        )}
-                        {product.inventory === 0 && (
-                          <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                            background: "linear-gradient(to right, var(--neutral-500), var(--neutral-600))"
-                          }}>
-                            😔
-                          </div>
-                        )}
-                      </div>
+                          {product.inventory === 0 && (
+                            <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                              background: "linear-gradient(to right, var(--neutral-500), var(--neutral-600))"
+                            }}>
+                              😔
+                            </div>
+                          )}
+                        </div>                      
+                      </Link>
 
                       {/* Product Info */}
                       <div className="p-4 lg:p-6">
