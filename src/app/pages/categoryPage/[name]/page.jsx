@@ -1,40 +1,63 @@
+// app/pages/categoryPage/[category]/page.js
 "use client"
-import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-export default function ProductsGrid() {
+export default function Page() {
+  const searchParams = useSearchParams();
+  const params = useParams();
+  const router = useRouter();
+  
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [categoryInfo, setCategoryInfo] = useState(null);
   const [selectedType, setSelectedType] = useState("all");
   const [sortBy, setSortBy] = useState("featured");
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
-  const [showFilters, setShowFilters] = useState(false); // New state for mobile filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [quantityInCart, setQuantityInCart] = useState({});
+
+  // Extract parameters
+  const categoryId = searchParams.get('id');
+  const categoryName = params.category ? decodeURIComponent(params.category) : '';
 
   useEffect(() => { 
-    const fetchProducts = async () => {
+    const fetchCategoryProducts = async () => {
+      if (!categoryId) return;
+      
       try {
         setLoading(true);
-        const response = await fetch("/api/product/getProduct");
+        
+        const response = await fetch(`/api/product/byCategory?id=${categoryId}`);
         const data = await response.json();
+        
         if (data.status === "success") {
           setProducts(data.data);
           setFilteredProducts(data.data);
-        } else {
-          console.error("Failed to fetch products:", data.msg);
         }
+        
+        // Initialize cart quantities
+        const initialQuantities = {};
+        if (data.status === "success") {
+          data.data.forEach(product => {
+            initialQuantities[product.id] = 1;
+          });
+          setQuantityInCart(initialQuantities);
+        }
+        
       } catch (error) {
-        console.error("Error fetching products:", error);
+        console.error("Error fetching category products:", error);
       } finally {
         setLoading(false);
       }
     }
     
-    fetchProducts();
-  }, []);
+    fetchCategoryProducts();
+  }, [categoryId]);
 
   // Filter products when filters change
   useEffect(() => {
@@ -126,6 +149,27 @@ export default function ProductsGrid() {
     return price - (price * discountPercent / 100);
   };
 
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-BD', {
+      style: 'currency',
+      currency: 'BDT',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const handleAddToCart = (productId, productName) => {
+    const quantity = quantityInCart[productId] || 1;
+    alert(`Added ${quantity} ${productName} to cart!`);
+  };
+
+  const updateQuantity = (productId, change) => {
+    setQuantityInCart(prev => {
+      const currentQty = prev[productId] || 1;
+      const newQty = Math.max(1, currentQty + change);
+      return { ...prev, [productId]: newQty };
+    });
+  };
+
   // Close filters when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -153,10 +197,10 @@ export default function ProductsGrid() {
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-6 border-4 rounded-full animate-spin" style={{
             borderColor: "var(--primary-400)",
-            borderTopColor: "var(--primary-600)"
+            borderTopColor: "var(--accent-600)"
           }}></div>
-          <p className="font-medium" style={{ color: "var(--primary-700)" }}>
-            Loading amazing products...
+          <p className="text-lg font-bold" style={{ color: "var(--primary-700)" }}>
+            Loading {categoryName || 'category'} products...
           </p>
         </div>
       </div>
@@ -716,13 +760,7 @@ export default function ProductsGrid() {
                           
                           {/* Badges */}
                           <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
-                            {/* {product.featured && (
-                              <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                                background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
-                              }}>
-                                ⭐
-                              </span>
-                            )} */}
+                             
                             {isDiscounted && (
                               <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
                                 background: "linear-gradient(to right, var(--secondary-500), var(--secondary-600))"
@@ -752,14 +790,7 @@ export default function ProductsGrid() {
 
                       {/* Product Info */}
                       <div className="p-4 lg:p-6">
-                        {/* <div className="mb-3 lg:mb-4">
-                          <span className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs font-bold rounded-lg" style={{
-                            background: "linear-gradient(to right, var(--primary-100), var(--primary-200))",
-                            color: "var(--primary-700)"
-                          }}>
-                            {product.type?.toUpperCase() || "PRODUCT"}
-                          </span>
-                        </div> */}
+                         
                         
                         <h3 className="mb-2 text-lg font-bold transition-colors lg:text-xl lg:mb-3 line-clamp-1" style={{
                           color: "var(--primary-900)"
@@ -769,10 +800,7 @@ export default function ProductsGrid() {
                         >
                           {product.name}
                         </h3>
-                        
-                        {/* <p className="mb-4 text-sm lg:mb-5 line-clamp-2" style={{ color: "var(--primary-600)" }}>
-                          {product.description}
-                        </p> */}
+                      
 
                         {/* Price */}
                         <div className="flex items-center gap-2 mb-4 lg:gap-3 lg:mb-6">
@@ -798,69 +826,7 @@ export default function ProductsGrid() {
                           )}
                         </div>
 
-                        {/* Colors & Sizes
-                        <div className="mb-4 space-y-3 lg:space-y-4 lg:mb-6">
-                          {product.color?.length > 0 && (
-                            <div>
-                              <span className="block mb-2 text-xs font-medium" style={{ color: "var(--primary-500)" }}>
-                                Colors:
-                              </span>
-                              <div className="flex gap-2">
-                                {product.color.slice(0, 4).map((color, idx) => (
-                                  <div 
-                                    key={idx}
-                                    className="w-6 h-6 border-2 rounded-full lg:w-8 lg:h-8"
-                                    style={{ 
-                                      backgroundColor: color.toLowerCase(),
-                                      borderColor: "white",
-                                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-                                    }}
-                                    title={color}
-                                  />
-                                ))}
-                                {product.color.length > 4 && (
-                                  <div className="flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full lg:w-8 lg:h-8" style={{
-                                    backgroundColor: "var(--primary-100)",
-                                    color: "var(--primary-700)"
-                                  }}>
-                                    +{product.color.length - 4}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {product.size?.length > 0 && (
-                            <div>
-                              <span className="block mb-2 text-xs font-medium" style={{ color: "var(--primary-500)" }}>
-                                Sizes:
-                              </span>
-                              <div className="flex gap-2">
-                                {product.size.slice(0, 5).map((size, idx) => (
-                                  <span 
-                                    key={idx}
-                                    className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs rounded-lg font-medium border"
-                                    style={{
-                                      backgroundColor: "var(--primary-50)",
-                                      color: "var(--primary-700)",
-                                      borderColor: "var(--primary-200)"
-                                    }}
-                                  >
-                                    {size}
-                                  </span>
-                                ))}
-                                {product.size.length > 5 && (
-                                  <span className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs rounded-lg font-medium" style={{
-                                    backgroundColor: "var(--primary-100)",
-                                    color: "var(--primary-500)"
-                                  }}>
-                                    +{product.size.length - 5}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div> */}
+                        
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 lg:gap-3">
