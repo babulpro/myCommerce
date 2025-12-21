@@ -2,9 +2,9 @@
 
 import Link from 'next/link' 
 import { useEffect, useState } from 'react'
-import UserProfile from '../SubMenu/SubMenu'
+import LogInMenu from '../SubMenu/logInMenu'
 
-export default function MainNavbar() {
+export default function LogInMainMenu() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [isScrolled, setIsScrolled] = useState(false)
@@ -296,7 +296,7 @@ export default function MainNavbar() {
 
             {/* Right: User Profile */}
             <div className="flex items-center gap-2">
-              <UserProfile />
+              <LogInMenu />
             </div>
           </div>
         </div>

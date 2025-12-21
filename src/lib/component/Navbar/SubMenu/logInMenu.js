@@ -1,9 +1,9 @@
 "use client"
+ import React from "react";
+import Logout from "./LogOut";
 
-import Login from "./Login";
 
-
-export default function UserProfile() {
+export default function LogInMenu() {
     
   return (
     <div className="flex items-center gap-3">
@@ -175,9 +175,8 @@ export default function UserProfile() {
       </div>
 
       {/* User Profile - Always Visible */}
-      
-      <Login/>
-      {/* <Logout/> */}
+     
+      <Logout/>
     </div>
   );
 }
