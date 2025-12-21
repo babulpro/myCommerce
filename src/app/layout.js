@@ -21,7 +21,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <div className="mb-18 ">
+        <div className="pt-18">
           <MainNavbar/>
         </div>
         {children}
