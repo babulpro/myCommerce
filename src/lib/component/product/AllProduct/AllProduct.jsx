@@ -12,7 +12,8 @@ export default function ProductsGrid() {
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
-  const [showFilters, setShowFilters] = useState(false); // New state for mobile filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [wishlist, setWishlist] = useState([]); // New state for wishlist
 
   useEffect(() => { 
     const fetchProducts = async () => {
@@ -35,6 +36,19 @@ export default function ProductsGrid() {
     
     fetchProducts();
   }, []);
+
+  // Load wishlist from localStorage on initial render
+  useEffect(() => {
+    const savedWishlist = localStorage.getItem('nextshop-wishlist');
+    if (savedWishlist) {
+      setWishlist(JSON.parse(savedWishlist));
+    }
+  }, []);
+
+  // Save wishlist to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('nextshop-wishlist', JSON.stringify(wishlist));
+  }, [wishlist]);
 
   // Filter products when filters change
   useEffect(() => {
@@ -111,6 +125,21 @@ export default function ProductsGrid() {
         ? prev.filter(s => s !== size)
         : [...prev, size]
     );
+  };
+
+  // Wishlist functions
+  const toggleWishlist = (productId, productName) => {
+    if (wishlist.includes(productId)) {
+      setWishlist(wishlist.filter(id => id !== productId));
+      // You can add a toast notification here: `${productName} removed from wishlist`
+    } else {
+      setWishlist([...wishlist, productId]);
+      // You can add a toast notification here: `${productName} added to wishlist`
+    }
+  };
+
+  const isInWishlist = (productId) => {
+    return wishlist.includes(productId);
   };
 
   const clearFilters = () => {
@@ -204,8 +233,26 @@ export default function ProductsGrid() {
               )}
             </button>
             
-            <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
-              {filteredProducts.length} products
+            <div className="flex items-center gap-4">
+              <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
+                {filteredProducts.length} products
+              </div>
+              <Link 
+                href="/wishlist" 
+                className="relative p-2 transition-all duration-300 rounded-lg hover:bg-gray-50"
+                title="View Wishlist"
+              >
+                <span className="text-lg">❤️</span>
+                {wishlist.length > 0 && (
+                  <span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full -top-1 -right-1"
+                    style={{
+                      backgroundColor: 'var(--accent-500)',
+                      color: 'white'
+                    }}>
+                    {wishlist.length}
+                  </span>
+                )}
+              </Link>
             </div>
           </div>
         </div>
@@ -579,8 +626,33 @@ export default function ProductsGrid() {
                 </div>
               )}
 
+              {/* Wishlist Counter in Desktop */}
+              <div className="pt-6 mb-4" style={{ borderTop: "1px solid var(--primary-100)" }}>
+                <Link 
+                  href="/wishlist" 
+                  className="flex items-center justify-between p-3 transition-all duration-300 rounded-xl hover:shadow-md group"
+                  style={{ 
+                    backgroundColor: 'var(--primary-25)',
+                    border: '1px solid var(--primary-100)'
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 transition-colors rounded-lg group-hover:bg-red-50"
+                      style={{ backgroundColor: 'var(--primary-100)' }}>
+                      <span className="text-lg">❤️</span>
+                    </div>
+                    <div>
+                      <div className="font-medium" style={{ color: 'var(--primary-800)' }}>My Wishlist</div>
+                      <div className="text-sm" style={{ color: 'var(--primary-600)' }}>{wishlist.length} items saved</div>
+                    </div>
+                  </div>
+                  <span className="text-lg font-bold transition-transform group-hover:scale-110" 
+                    style={{ color: 'var(--accent-600)' }}>→</span>
+                </Link>
+              </div>
+
               {/* Product Count */}
-              <div className="pt-6 mt-8" style={{ borderTop: "1px solid var(--primary-100)" }}>
+              <div className="pt-6 mt-4" style={{ borderTop: "1px solid var(--primary-100)" }}>
                 <p style={{ color: "var(--primary-600)" }}>
                   <span className="text-lg font-bold" style={{ color: "var(--primary-800)" }}>
                     {filteredProducts.length}
@@ -690,6 +762,7 @@ export default function ProductsGrid() {
                 {filteredProducts.map((product) => {
                   const discountedPrice = calculateDiscountedPrice(product.price, product.discountPercent);
                   const isDiscounted = product.discountPercent > 0;
+                  const inWishlist = isInWishlist(product.id);
                   
                   return (
                     <div key={product.id} className="overflow-hidden transition-all duration-500 shadow-lg group rounded-xl lg:rounded-2xl hover:-translate-y-2" style={{
@@ -703,63 +776,106 @@ export default function ProductsGrid() {
                       e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0, 0, 0, 0.1)";
                     }}
                     >
-                      {/* Product Image */}
-                      <Link key={product.name} href={`/pages/product/detail/${product.id}`} className="block">
-                        <div className="relative h-56 overflow-hidden lg:h-72" style={{
-                          background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
-                        }}>
-                          <img 
-                            src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
-                            alt={product.name}
-                            className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
-                          />
-                          
-                          {/* Badges */}
-                          <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
-                            {/* {product.featured && (
-                              <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                                background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
-                              }}>
-                                ⭐
+                      {/* Product Image with Wishlist Icon */}
+                      <div className="relative">
+                        <Link key={product.name} href={`/pages/product/detail/${product.id}`} className="block">
+                          <div className="relative h-56 overflow-hidden lg:h-72" style={{
+                            background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
+                          }}>
+                            <img 
+                              src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
+                              alt={product.name}
+                              className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                            />
+                            
+                            {/* Wishlist Icon - Appears on hover */}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleWishlist(product.id, product.name);
+                              }}
+                              className="absolute z-10 flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 opacity-0 top-3 right-3 group-hover:opacity-100 hover:scale-110 text-slate-600"
+                              title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+                            >
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg"
+                                style={{
+                                  backgroundColor: 'white',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                }}>
+                                <span className={`text-xl transition-all duration-300 ${inWishlist ? 'scale-125' : ''}`}
+                                  style={{
+                                    color: inWishlist ? 'var(--error-500)' : 'var(--primary-500)'
+                                  }}>
+                                  {inWishlist ? '❤️' : '🤍'}
+                                </span>
+                              </div>
+                              <span className="mt-1 text-xs font-medium whitespace-nowrap"
+                                style={{
+                                  color: 'white',
+                                  textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                                }}>
+                                {inWishlist ? 'Added' : 'Wishlist'}
                               </span>
-                            )} */}
-                            {isDiscounted && (
-                              <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                                background: "linear-gradient(to right, var(--secondary-500), var(--secondary-600))"
+                            </button>
+                            
+                            {/* Badges */}
+                            <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
+                              {isDiscounted && (
+                                <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                                  background: "linear-gradient(to right, var(--secondary-500), var(--secondary-600))"
+                                }}>
+                                  🔥 {product.discountPercent}%
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Stock Indicator */}
+                            {product.inventory <= 5 && product.inventory > 0 && (
+                              <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                                background: "linear-gradient(to right, var(--warning-500), var(--warning-600))"
                               }}>
-                                🔥 {product.discountPercent}%
-                              </span>
+                                ⚡ {product.inventory}
+                              </div>
                             )}
-                          </div>
-                          
-                          {/* Stock Indicator */}
-                          {product.inventory <= 5 && product.inventory > 0 && (
-                            <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                              background: "linear-gradient(to right, var(--warning-500), var(--warning-600))"
-                            }}>
-                              ⚡ {product.inventory}
-                            </div>
-                          )}
-                          {product.inventory === 0 && (
-                            <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                              background: "linear-gradient(to right, var(--neutral-500), var(--neutral-600))"
-                            }}>
-                              😔
-                            </div>
-                          )}
-                        </div>                      
-                      </Link>
+                            {product.inventory === 0 && (
+                              <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                                background: "linear-gradient(to right, var(--neutral-500), var(--neutral-600))"
+                              }}>
+                                😔
+                              </div>
+                            )}
+                          </div>                      
+                        </Link>
+                      </div>
 
                       {/* Product Info */}
                       <div className="p-4 lg:p-6">
-                        {/* <div className="mb-3 lg:mb-4">
-                          <span className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs font-bold rounded-lg" style={{
-                            background: "linear-gradient(to right, var(--primary-100), var(--primary-200))",
-                            color: "var(--primary-700)"
-                          }}>
-                            {product.type?.toUpperCase() || "PRODUCT"}
-                          </span>
-                        </div> */}
+                        {/* Category Tag */}
+                        {product.category && (
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-3 py-1 text-xs font-medium rounded-full lg:px-4 lg:py-1.5 lg:text-sm"
+                              style={{
+                                backgroundColor: "var(--primary-50)",
+                                color: "var(--primary-700)"
+                              }}>
+                              {product.category}
+                            </span>
+                            {/* Wishlist Indicator - Always visible */}
+                            <button
+                              onClick={() => toggleWishlist(product.id, product.name)}
+                              className="p-2 ml-auto transition-all duration-300 rounded-full hover:bg-gray-50 text-slate-600"
+                              title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+                            >
+                              <span className={`text-lg transition-transform duration-300 hover:scale-110 ${inWishlist ? 'animate-pulse' : ''}`}
+                                style={{
+                                  color: inWishlist ? 'var(--error-500)' : 'var(--primary-400)'
+                                }}>
+                                {inWishlist ? '❤️' : '🤍'}
+                              </span>
+                            </button>
+                          </div>
+                        )}
                         
                         <h3 className="mb-2 text-lg font-bold transition-colors lg:text-xl lg:mb-3 line-clamp-1" style={{
                           color: "var(--primary-900)"
@@ -769,10 +885,7 @@ export default function ProductsGrid() {
                         >
                           {product.name}
                         </h3>
-                        
-                        {/* <p className="mb-4 text-sm lg:mb-5 line-clamp-2" style={{ color: "var(--primary-600)" }}>
-                          {product.description}
-                        </p> */}
+                      
 
                         {/* Price */}
                         <div className="flex items-center gap-2 mb-4 lg:gap-3 lg:mb-6">
@@ -798,69 +911,7 @@ export default function ProductsGrid() {
                           )}
                         </div>
 
-                        {/* Colors & Sizes
-                        <div className="mb-4 space-y-3 lg:space-y-4 lg:mb-6">
-                          {product.color?.length > 0 && (
-                            <div>
-                              <span className="block mb-2 text-xs font-medium" style={{ color: "var(--primary-500)" }}>
-                                Colors:
-                              </span>
-                              <div className="flex gap-2">
-                                {product.color.slice(0, 4).map((color, idx) => (
-                                  <div 
-                                    key={idx}
-                                    className="w-6 h-6 border-2 rounded-full lg:w-8 lg:h-8"
-                                    style={{ 
-                                      backgroundColor: color.toLowerCase(),
-                                      borderColor: "white",
-                                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-                                    }}
-                                    title={color}
-                                  />
-                                ))}
-                                {product.color.length > 4 && (
-                                  <div className="flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full lg:w-8 lg:h-8" style={{
-                                    backgroundColor: "var(--primary-100)",
-                                    color: "var(--primary-700)"
-                                  }}>
-                                    +{product.color.length - 4}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {product.size?.length > 0 && (
-                            <div>
-                              <span className="block mb-2 text-xs font-medium" style={{ color: "var(--primary-500)" }}>
-                                Sizes:
-                              </span>
-                              <div className="flex gap-2">
-                                {product.size.slice(0, 5).map((size, idx) => (
-                                  <span 
-                                    key={idx}
-                                    className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs rounded-lg font-medium border"
-                                    style={{
-                                      backgroundColor: "var(--primary-50)",
-                                      color: "var(--primary-700)",
-                                      borderColor: "var(--primary-200)"
-                                    }}
-                                  >
-                                    {size}
-                                  </span>
-                                ))}
-                                {product.size.length > 5 && (
-                                  <span className="px-2 lg:px-3 py-1 lg:py-1.5 text-xs rounded-lg font-medium" style={{
-                                    backgroundColor: "var(--primary-100)",
-                                    color: "var(--primary-500)"
-                                  }}>
-                                    +{product.size.length - 5}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div> */}
+                        
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 lg:gap-3">
@@ -922,6 +973,10 @@ export default function ProductsGrid() {
             <span>🔒 Secure Checkout</span>
             <span>🚚 Free Shipping</span>
             <span>🔄 Easy Returns</span>
+            <Link href="/wishlist" className="flex items-center gap-1 transition-colors hover:text-white">
+              <span>❤️</span>
+              <span>Wishlist ({wishlist.length})</span>
+            </Link>
           </div>
         </div>
       </div>

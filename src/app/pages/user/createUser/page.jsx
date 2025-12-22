@@ -1,9 +1,11 @@
 "use client"
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export default function Page() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -62,23 +64,36 @@ export default function Page() {
       return
     }
     
-    setIsLoading(true)
+    setIsLoading(true) 
+    
     
     try {
-      // API call simulation
-      await new Promise(resolve => setTimeout(resolve, 1500))
       
-      // Reset form
-      setFormData({
+      const response = await fetch(`/api/user/createUser`,{
+        method:"POST",
+        headers:{
+        "Content-type":"application/json"
+        },
+        body:JSON.stringify(formData)
+    })
+
+    if(!response.ok){
+      alert("something went wrong")
+    }
+
+    const json = await response.json()
+    if(json.status==="success"){
+      alert("registration success")
+      router.back()
+      
+       setFormData({
         name: '',
         email: '',
-        password: '',
-        confirmPassword: '',
+        password: ''
       })
-      
-      // Show success (you can add this back if needed)
-      // setSuccess(true)
-      // setTimeout(() => setSuccess(false), 3000)
+
+    } 
+       
       
     } catch (error) {
       setErrors({ submit: 'Failed to create account. Please try again.' })

@@ -19,7 +19,7 @@ export default function Page() {
     const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
     const [currentSlide, setCurrentSlide] = useState(0);
 
-    console.log("Product ID from URL:", id);
+     
 
     useEffect(() => {
         const fetchProductDetails = async () => {
