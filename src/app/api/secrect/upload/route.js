@@ -3,10 +3,7 @@ import prisma from '@/lib/prisma';
 
 export async function POST(request) {
   try {
-    const data = await request.json();
-    console.log("Received product data:", data);
-    
-    // Simple validation
+    const data = await request.json();  
     if (!data.name || !data.price) {
       return NextResponse.json({
         status: "fail",

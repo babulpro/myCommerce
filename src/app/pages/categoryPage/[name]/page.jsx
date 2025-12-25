@@ -1,29 +1,95 @@
 // app/pages/categoryPage/[category]/page.js
 "use client"
-import { useEffect, useState } from 'react';
-import { useSearchParams, useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Link from "next/link";
+import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams, useParams } from 'next/navigation';
 
-export default function Page() {
+export default function CategoryPage() {
   const searchParams = useSearchParams();
   const params = useParams();
-  const router = useRouter();
   
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [categoryInfo, setCategoryInfo] = useState(null);
   const [selectedType, setSelectedType] = useState("all");
   const [sortBy, setSortBy] = useState("featured");
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [quantityInCart, setQuantityInCart] = useState({});
+  const [wishlist, setWishlist] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [wishlistLoading, setWishlistLoading] = useState({});
 
   // Extract parameters
   const categoryId = searchParams.get('id');
   const categoryName = params.category ? decodeURIComponent(params.category) : '';
+
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        setAuthLoading(true);
+        const response = await fetch('/api/auth/check');
+        const data = await response.json();
+        const loggedIn = data.isLoggedIn;
+        setIsLoggedIn(loggedIn);
+        
+        if (loggedIn) {
+          // Load server wishlist
+          await loadServerWishlist();
+        } else {
+          // Load from localStorage for guests
+          loadLocalWishlist();
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        setIsLoggedIn(false);
+        loadLocalWishlist();
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+    
+    checkAuth();
+  }, []);
+
+  // Load wishlist from localStorage for guest users
+  const loadLocalWishlist = () => {
+    const savedWishlist = localStorage.getItem('nextshop-wishlist');
+    if (savedWishlist) {
+      try {
+        setWishlist(JSON.parse(savedWishlist));
+      } catch (error) {
+        console.error("Error parsing localStorage wishlist:", error);
+        setWishlist([]);
+      }
+    }
+  };
+
+  // Load wishlist from server for logged-in users
+  const loadServerWishlist = async () => {
+    try {
+      const response = await fetch('/api/product/wishList/getWishList');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === "success") {
+          const productIds = data.data?.items?.map(item => item.productId) || [];
+          setWishlist(productIds);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load server wishlist:", error);
+    }
+  };
+
+  // Save wishlist to localStorage for guest users
+  useEffect(() => {
+    if (!isLoggedIn) {
+      localStorage.setItem('nextshop-wishlist', JSON.stringify(wishlist));
+    }
+  }, [wishlist, isLoggedIn]);
 
   useEffect(() => { 
     const fetchCategoryProducts = async () => {
@@ -31,24 +97,15 @@ export default function Page() {
       
       try {
         setLoading(true);
-        
         const response = await fetch(`/api/product/byCategory?id=${categoryId}`);
         const data = await response.json();
         
         if (data.status === "success") {
           setProducts(data.data);
           setFilteredProducts(data.data);
+        } else {
+          console.error("Failed to fetch category products:", data.msg);
         }
-        
-        // Initialize cart quantities
-        const initialQuantities = {};
-        if (data.status === "success") {
-          data.data.forEach(product => {
-            initialQuantities[product.id] = 1;
-          });
-          setQuantityInCart(initialQuantities);
-        }
-        
       } catch (error) {
         console.error("Error fetching category products:", error);
       } finally {
@@ -120,55 +177,104 @@ export default function Page() {
   const allSizes = products.flatMap(p => p.size || []).filter(Boolean);
   const uniqueSizes = [...new Set(allSizes)].sort();
 
-  const toggleColor = (color) => {
+  const toggleColor = useCallback((color) => {
     setSelectedColors(prev =>
       prev.includes(color) 
         ? prev.filter(c => c !== color)
         : [...prev, color]
     );
-  };
+  }, []);
 
-  const toggleSize = (size) => {
+  const toggleSize = useCallback((size) => {
     setSelectedSizes(prev =>
       prev.includes(size) 
         ? prev.filter(s => s !== size)
         : [...prev, size]
     );
+  }, []);
+
+  // Enhanced Wishlist function
+  const toggleWishlist = async (productId, productName) => {
+    setWishlistLoading(prev => ({ ...prev, [productId]: true }));
+    
+    const alreadyInWishlist = wishlist.includes(productId);
+    
+    try {
+      if (isLoggedIn) {
+        // Use API for logged-in users
+        if (alreadyInWishlist) {
+          // Remove from server
+          const response = await fetch(`/api/product/wishList/DeleteWishList?id=${productId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.status === "success") {
+            setWishlist(prev => prev.filter(id => id !== productId));
+          } else {
+            alert(`❌ Failed: ${data.msg || "Could not remove from wishlist"}`);
+          }
+        } else {
+          // Add to server
+          const response = await fetch(`/api/product/wishList/addWishList?id=${productId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            if (data.status === "success" || data.code === "ALREADY_IN_WISHLIST") {
+              setWishlist(prev => [...prev, productId]);
+            } else {
+              alert(`❌ Failed: ${data.msg || "Server error"}`);
+            }
+          } else {
+            alert(`❌ Failed: ${data.msg || "Server error"}`);
+          }
+        }
+      } else {
+        // Use localStorage for guest users
+        if (alreadyInWishlist) {
+          const newWishlist = wishlist.filter(id => id !== productId);
+          setWishlist(newWishlist);
+          localStorage.setItem('nextshop-wishlist', JSON.stringify(newWishlist));
+        } else {
+          const newWishlist = [...wishlist, productId];
+          setWishlist(newWishlist);
+          localStorage.setItem('nextshop-wishlist', JSON.stringify(newWishlist));
+        }
+      }
+    } catch (error) {
+      console.error("❌ Wishlist error:", error);
+      alert("❌ Failed to update wishlist. Please try again.");
+    } finally {
+      setWishlistLoading(prev => ({ ...prev, [productId]: false }));
+    }
   };
 
-  const clearFilters = () => {
+  const isInWishlist = useCallback((productId) => {
+    return wishlist.includes(productId);
+  }, [wishlist]);
+
+  const clearFilters = useCallback(() => {
     setSelectedType("all");
     setSelectedColors([]);
     setSelectedSizes([]);
     setPriceRange([0, 5000]);
     setSortBy("featured");
-  };
+  }, []);
 
-  const calculateDiscountedPrice = (price, discountPercent) => {
+  const calculateDiscountedPrice = useCallback((price, discountPercent) => {
     if (!discountPercent) return price;
     return price - (price * discountPercent / 100);
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-BD', {
-      style: 'currency',
-      currency: 'BDT',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const handleAddToCart = (productId, productName) => {
-    const quantity = quantityInCart[productId] || 1;
-    alert(`Added ${quantity} ${productName} to cart!`);
-  };
-
-  const updateQuantity = (productId, change) => {
-    setQuantityInCart(prev => {
-      const currentQty = prev[productId] || 1;
-      const newQty = Math.max(1, currentQty + change);
-      return { ...prev, [productId]: newQty };
-    });
-  };
+  }, []);
 
   // Close filters when clicking outside on mobile
   useEffect(() => {
@@ -189,7 +295,7 @@ export default function Page() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showFilters]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen" style={{
         background: "linear-gradient(to bottom, var(--primary-50), white)"
@@ -197,9 +303,9 @@ export default function Page() {
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-6 border-4 rounded-full animate-spin" style={{
             borderColor: "var(--primary-400)",
-            borderTopColor: "var(--accent-600)"
+            borderTopColor: "var(--primary-600)"
           }}></div>
-          <p className="text-lg font-bold" style={{ color: "var(--primary-700)" }}>
+          <p className="font-medium" style={{ color: "var(--primary-700)" }}>
             Loading {categoryName || 'category'} products...
           </p>
         </div>
@@ -248,8 +354,26 @@ export default function Page() {
               )}
             </button>
             
-            <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
-              {filteredProducts.length} products
+            <div className="flex items-center gap-4">
+              <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
+                {filteredProducts.length} products
+              </div>
+              <Link 
+                href="/wishlist" 
+                className="relative p-2 transition-all duration-300 rounded-lg hover:bg-gray-50"
+                title="View Wishlist"
+              >
+                <span className="text-lg">❤️</span>
+                {wishlist.length > 0 && (
+                  <span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full -top-1 -right-1"
+                    style={{
+                      backgroundColor: 'var(--accent-500)',
+                      color: 'white'
+                    }}>
+                    {wishlist.length}
+                  </span>
+                )}
+              </Link>
             </div>
           </div>
         </div>
@@ -334,7 +458,7 @@ export default function Page() {
                       <input
                         type="number"
                         value={priceRange[0]}
-                        onChange={(e) => e.target.value <= 0 ? setPriceRange([1, priceRange[1]]) : setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                        onChange={(e) => setPriceRange([Math.max(1, parseInt(e.target.value) || 0), priceRange[1]])}
                         className="w-1/2 px-4 py-2 border-2 rounded-lg"
                         style={{
                           borderColor: "var(--primary-200)",
@@ -346,7 +470,7 @@ export default function Page() {
                       <input
                         type="number"
                         value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 5000])}
                         className="w-1/2 px-4 py-2 border-2 rounded-lg"
                         style={{
                           borderColor: "var(--primary-200)",
@@ -495,7 +619,7 @@ export default function Page() {
                     <input
                       type="number"
                       value={priceRange[0]}
-                      onChange={(e) => e.target.value <= 0 ? setPriceRange([1, priceRange[1]]) : setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                      onChange={(e) => setPriceRange([Math.max(1, parseInt(e.target.value) || 0), priceRange[1]])}
                       className="w-1/2 px-4 py-2 border-2 rounded-lg"
                       style={{
                         borderColor: "var(--primary-200)",
@@ -515,7 +639,7 @@ export default function Page() {
                     <input
                       type="number"
                       value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 5000])}
                       className="w-1/2 px-4 py-2 border-2 rounded-lg"
                       style={{
                         borderColor: "var(--primary-200)",
@@ -623,8 +747,36 @@ export default function Page() {
                 </div>
               )}
 
+              {/* Wishlist Counter in Desktop */}
+              <div className="pt-6 mb-4" style={{ borderTop: "1px solid var(--primary-100)" }}>
+                <Link 
+                  href="/wishlist" 
+                  className="flex items-center justify-between p-3 transition-all duration-300 rounded-xl hover:shadow-md group"
+                  style={{ 
+                    backgroundColor: 'var(--primary-25)',
+                    border: '1px solid var(--primary-100)'
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 transition-colors rounded-lg group-hover:bg-red-50"
+                      style={{ backgroundColor: 'var(--primary-100)' }}>
+                      <span className="text-lg">❤️</span>
+                    </div>
+                    <div>
+                      <div className="font-medium" style={{ color: 'var(--primary-800)' }}>My Wishlist</div>
+                      <div className="text-sm" style={{ color: 'var(--primary-600)' }}>{wishlist.length} items saved</div>
+                      {!isLoggedIn && (
+                        <div className="text-xs" style={{ color: 'var(--warning-600)' }}>Saved locally</div>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-lg font-bold transition-transform group-hover:scale-110" 
+                    style={{ color: 'var(--accent-600)' }}>→</span>
+                </Link>
+              </div>
+
               {/* Product Count */}
-              <div className="pt-6 mt-8" style={{ borderTop: "1px solid var(--primary-100)" }}>
+              <div className="pt-6 mt-4" style={{ borderTop: "1px solid var(--primary-100)" }}>
                 <p style={{ color: "var(--primary-600)" }}>
                   <span className="text-lg font-bold" style={{ color: "var(--primary-800)" }}>
                     {filteredProducts.length}
@@ -642,7 +794,35 @@ export default function Page() {
 
           {/* Main Content */}
           <div className="lg:w-3/4">
-            {/* Sorting Bar - Updated for mobile */}
+            {/* Category Header */}
+            <div className="p-6 mb-8 shadow-lg rounded-2xl" style={{
+              backgroundColor: "white",
+              border: "1px solid var(--primary-100)"
+            }}>
+              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                <div>
+                  <h1 className="mb-2 text-2xl font-bold lg:text-3xl" style={{ color: "var(--primary-800)" }}>
+                    {categoryName || 'Category'} Products
+                  </h1>
+                  <p className="text-lg" style={{ color: "var(--primary-600)" }}>
+                    Discover the best products in {categoryName || 'this category'}
+                  </p>
+                </div>
+                <Link 
+                  href="/products"
+                  className="px-6 py-3 font-bold rounded-xl transition-all duration-300 hover:-translate-y-0.5"
+                  style={{
+                    background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
+                    color: "white",
+                    boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"
+                  }}
+                >
+                  ← All Categories
+                </Link>
+              </div>
+            </div>
+
+            {/* Sorting Bar */}
             <div className="p-4 mb-8 shadow-lg rounded-2xl lg:p-6" style={{
               backgroundColor: "white",
               border: "1px solid var(--primary-100)"
@@ -653,6 +833,11 @@ export default function Page() {
                   <span className="ml-2 font-medium" style={{ color: "var(--primary-600)" }}>
                     products found
                   </span>
+                  {!isLoggedIn && (
+                    <span className="ml-2 text-sm" style={{ color: "var(--warning-600)" }}>
+                      (Wishlist saved locally)
+                    </span>
+                  )}
                   {(selectedType !== "all" || selectedColors.length > 0 || selectedSizes.length > 0 || priceRange[0] > 0 || priceRange[1] < 5000) && (
                     <button 
                       onClick={clearFilters}
@@ -734,6 +919,8 @@ export default function Page() {
                 {filteredProducts.map((product) => {
                   const discountedPrice = calculateDiscountedPrice(product.price, product.discountPercent);
                   const isDiscounted = product.discountPercent > 0;
+                  const inWishlist = isInWishlist(product.id);
+                  const isLoading = wishlistLoading[product.id];
                   
                   return (
                     <div key={product.id} className="overflow-hidden transition-all duration-500 shadow-lg group rounded-xl lg:rounded-2xl hover:-translate-y-2" style={{
@@ -747,50 +934,115 @@ export default function Page() {
                       e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0, 0, 0, 0.1)";
                     }}
                     >
-                      {/* Product Image */}
-                      <Link key={product.name} href={`/pages/product/detail/${product.id}`} className="block">
-                        <div className="relative h-56 overflow-hidden lg:h-72" style={{
-                          background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
-                        }}>
-                          <img 
-                            src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
-                            alt={product.name}
-                            className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
-                          />
-                          
-                          {/* Badges */}
-                          <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
-                             
-                            {isDiscounted && (
-                              <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                                background: "linear-gradient(to right, var(--secondary-500), var(--secondary-600))"
-                              }}>
-                                🔥 {product.discountPercent}%
+                      {/* Product Image with Wishlist Icon */}
+                      <div className="relative">
+                        <Link key={product.name} href={`/pages/product/detail/${product.id}`} className="block">
+                          <div className="relative h-56 overflow-hidden lg:h-72" style={{
+                            background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
+                          }}>
+                            <img 
+                              src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
+                              alt={product.name}
+                              className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                            />
+                            
+                            {/* Enhanced Wishlist Icon */}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleWishlist(product.id, product.name);
+                              }}
+                              disabled={isLoading}
+                              className="absolute z-10 flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 opacity-0 top-3 right-3 group-hover:opacity-100 hover:scale-110 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+                            >
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg"
+                                style={{
+                                  backgroundColor: 'white',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                }}>
+                                {isLoading ? (
+                                  <span className="text-xs">⏳</span>
+                                ) : (
+                                  <span className={`text-xl transition-all duration-300 ${inWishlist ? 'scale-125' : ''}`}
+                                    style={{
+                                      color: inWishlist ? 'var(--error-500)' : 'var(--primary-500)'
+                                    }}>
+                                    {inWishlist ? '❤️' : '🤍'}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="mt-1 text-xs font-medium whitespace-nowrap text-slate-700"
+                                style={{
+                                  textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                                }}>
+                                {isLoading ? 'Updating...' : (inWishlist ? 'Added' : 'Wishlist')}
                               </span>
+                            </button>
+                            
+                            {/* Badges */}
+                            <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
+                              {isDiscounted && (
+                                <span className="px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                                  background: "linear-gradient(to right, var(--secondary-500), var(--secondary-600))"
+                                }}>
+                                  🔥 {product.discountPercent}%
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Stock Indicator */}
+                            {product.inventory <= 5 && product.inventory > 0 && (
+                              <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                                background: "linear-gradient(to right, var(--warning-500), var(--warning-600))"
+                              }}>
+                                ⚡ {product.inventory}
+                              </div>
                             )}
-                          </div>
-                          
-                          {/* Stock Indicator */}
-                          {product.inventory <= 5 && product.inventory > 0 && (
-                            <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                              background: "linear-gradient(to right, var(--warning-500), var(--warning-600))"
-                            }}>
-                              ⚡ {product.inventory}
-                            </div>
-                          )}
-                          {product.inventory === 0 && (
-                            <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
-                              background: "linear-gradient(to right, var(--neutral-500), var(--neutral-600))"
-                            }}>
-                              😔
-                            </div>
-                          )}
-                        </div>                      
-                      </Link>
+                            {product.inventory === 0 && (
+                              <div className="absolute bottom-3 lg:bottom-4 left-3 lg:left-4 px-3 lg:px-4 py-1 lg:py-1.5 text-white text-xs font-bold rounded-full shadow-lg" style={{
+                                background: "linear-gradient(to right, var(--neutral-500), var(--neutral-600))"
+                              }}>
+                                😔
+                              </div>
+                            )}
+                          </div>                      
+                        </Link>
+                      </div>
 
                       {/* Product Info */}
                       <div className="p-4 lg:p-6">
-                         
+                        {/* Category Tag */}
+                        {product.category && (
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-3 py-1 text-xs font-medium rounded-full lg:px-4 lg:py-1.5 lg:text-sm"
+                              style={{
+                                backgroundColor: "var(--primary-50)",
+                                color: "var(--primary-700)"
+                              }}>
+                              {product.category}
+                            </span>
+                            {/* Wishlist Indicator - Always visible */}
+                            <button
+                              onClick={() => toggleWishlist(product.id, product.name)}
+                              disabled={isLoading}
+                              className="p-2 ml-auto transition-all duration-300 rounded-full hover:bg-gray-50 text-slate-600 disabled:opacity-50"
+                              title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+                            >
+                              {isLoading ? (
+                                <span className="text-xs">⏳</span>
+                              ) : (
+                                <span className={`text-lg transition-transform duration-300 hover:scale-110 ${inWishlist ? 'animate-pulse' : ''}`}
+                                  style={{
+                                    color: inWishlist ? 'var(--error-500)' : 'var(--primary-400)'
+                                  }}>
+                                  {inWishlist ? '❤️' : '🤍'}
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                        )}
                         
                         <h3 className="mb-2 text-lg font-bold transition-colors lg:text-xl lg:mb-3 line-clamp-1" style={{
                           color: "var(--primary-900)"
@@ -825,8 +1077,6 @@ export default function Page() {
                             </span>
                           )}
                         </div>
-
-                        
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 lg:gap-3">
@@ -883,11 +1133,17 @@ export default function Page() {
           </p>
           <p style={{ color: "var(--primary-300)" }}>
             Showing <span className="font-bold" style={{ color: "var(--accent-300)" }}>{filteredProducts.length}</span> amazing products curated just for you
+            {!isLoggedIn && (
+              <span className="ml-2 text-sm" style={{ color: "var(--warning-300)" }}>
+                (Login to sync wishlist)
+              </span>
+            )}
           </p>
-          <div className="flex justify-center gap-6 mt-4" style={{ color: "var(--primary-400)" }}>
+          <div className="flex justify-center gap-6 mt-4 mb-12 md:mb-0" style={{ color: "var(--primary-400)" }}>
             <span>🔒 Secure Checkout</span>
             <span>🚚 Free Shipping</span>
-            <span>🔄 Easy Returns</span>
+            <span>🔄 Easy Returns</span> 
+              
           </div>
         </div>
       </div>

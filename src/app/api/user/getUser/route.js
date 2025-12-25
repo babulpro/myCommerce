@@ -8,8 +8,7 @@ export async function POST(req,res){
     
     
     try{
-        const data = await req.json(); 
-        console.log(data)
+        const data = await req.json();  
         const findUser = await prisma.user.findMany()
         if(!findUser){
             return NextResponse.json({

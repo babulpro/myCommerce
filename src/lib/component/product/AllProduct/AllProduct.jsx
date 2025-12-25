@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 
 export default function ProductsGrid() {
   const [products, setProducts] = useState([]);
@@ -13,7 +13,185 @@ export default function ProductsGrid() {
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [wishlist, setWishlist] = useState([]); // New state for wishlist
+  const [wishlist, setWishlist] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [wishlistLoading, setWishlistLoading] = useState({});
+
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        setAuthLoading(true);
+        const response = await fetch('/api/auth/check');
+        const data = await response.json();
+        const loggedIn = data.isLoggedIn;
+        setIsLoggedIn(loggedIn);
+        
+        if (loggedIn) {
+          // Load server wishlist first
+          await loadServerWishlist();
+          
+          // Check if there's local wishlist to sync
+          const localWishlist = localStorage.getItem('nextshop-wishlist');
+          if (localWishlist) {
+            // Wait 1 second to ensure server wishlist is fully loaded
+            setTimeout(async () => {
+              await syncLocalToServer();
+            }, 1000);
+          }
+        } else {
+          // For guest users, only load from localStorage
+          loadLocalWishlist();
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        setIsLoggedIn(false);
+        loadLocalWishlist();
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+    
+    checkAuth();
+  }, []);
+
+  // Load wishlist from localStorage for guest users
+  const loadLocalWishlist = () => {
+    const savedWishlist = localStorage.getItem('nextshop-wishlist');
+    if (savedWishlist) {
+      try {
+        const parsedWishlist = JSON.parse(savedWishlist);
+        setWishlist(parsedWishlist);
+      } catch (error) {
+        console.error("Error parsing localStorage wishlist:", error);
+        setWishlist([]);
+      }
+    } else {
+      setWishlist([]);
+    }
+  };
+
+  // Load wishlist from server for logged-in users
+  const loadServerWishlist = async () => {
+    try {
+      const response = await fetch('/api/product/wishList/getWishList');
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === "success") {
+          const productIds = data.data.items?.map(item => item.id) || [];
+          setWishlist(productIds);
+          return productIds;
+        }
+      }
+      setWishlist([]);
+      return [];
+    } catch (error) {
+      console.error("Failed to load server wishlist:", error);
+      setWishlist([]);
+      return [];
+    }
+  };
+
+  // Sync localStorage wishlist to server when user logs in
+  const syncLocalToServer = async () => {
+    const localWishlist = localStorage.getItem('nextshop-wishlist');
+    
+    if (!localWishlist) {
+      return;
+    }
+    
+    try {
+      const productIds = JSON.parse(localWishlist);
+      
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        localStorage.removeItem('nextshop-wishlist');
+        return;
+      }
+      
+      // Filter out products already in server wishlist
+      const currentWishlist = wishlist;
+      const productsToSync = productIds.filter(id => !currentWishlist.includes(id));
+      
+      if (productsToSync.length === 0) {
+        localStorage.removeItem('nextshop-wishlist');
+        return;
+      }
+      
+      // Create array of sync promises
+      const syncPromises = productsToSync.map(async (productId) => {
+        try {
+          const response = await fetch(`/api/product/wishList/addWishList?id=${productId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          const data = await response.json();
+          
+          if (data.status === "success" || data.code === "ALREADY_IN_WISHLIST") {
+            return {
+              productId,
+              success: true,
+              data
+            };
+          } else {
+            return {
+              productId,
+              success: false,
+              error: data.msg
+            };
+          }
+          
+        } catch (error) {
+          return {
+            productId,
+            success: false,
+            error: error.message
+          };
+        }
+      });
+      
+      // Wait for all sync operations to complete
+      const results = await Promise.all(syncPromises);
+      
+      // Check results
+      const successfulSyncs = results.filter(r => r.success);
+      const failedSyncs = results.filter(r => !r.success);
+      
+      if (failedSyncs.length > 0) {
+        // Keep only failed items in localStorage for retry
+        const failedProductIds = failedSyncs.map(r => r.productId);
+        localStorage.setItem('nextshop-wishlist', JSON.stringify(failedProductIds));
+      } else {
+        // All succeeded - clear localStorage
+        localStorage.removeItem('nextshop-wishlist');
+      }
+      
+      if (successfulSyncs.length > 0) {
+        // Update local wishlist state with newly synced items
+        const newProductIds = successfulSyncs.map(r => r.productId);
+        setWishlist(prev => [...new Set([...prev, ...newProductIds])]);
+        
+        // Reload server wishlist to confirm
+        setTimeout(async () => {
+          await loadServerWishlist();
+        }, 500);
+      }
+      
+    } catch (error) {
+      console.error("Error parsing or syncing wishlist:", error);
+    }
+  };
+
+  // Save wishlist to localStorage for guest users
+  useEffect(() => {
+    if (!isLoggedIn && wishlist.length > 0) {
+      localStorage.setItem('nextshop-wishlist', JSON.stringify(wishlist));
+    }
+  }, [wishlist, isLoggedIn]);
 
   useEffect(() => { 
     const fetchProducts = async () => {
@@ -36,19 +214,6 @@ export default function ProductsGrid() {
     
     fetchProducts();
   }, []);
-
-  // Load wishlist from localStorage on initial render
-  useEffect(() => {
-    const savedWishlist = localStorage.getItem('nextshop-wishlist');
-    if (savedWishlist) {
-      setWishlist(JSON.parse(savedWishlist));
-    }
-  }, []);
-
-  // Save wishlist to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('nextshop-wishlist', JSON.stringify(wishlist));
-  }, [wishlist]);
 
   // Filter products when filters change
   useEffect(() => {
@@ -111,49 +276,104 @@ export default function ProductsGrid() {
   const allSizes = products.flatMap(p => p.size || []).filter(Boolean);
   const uniqueSizes = [...new Set(allSizes)].sort();
 
-  const toggleColor = (color) => {
+  const toggleColor = useCallback((color) => {
     setSelectedColors(prev =>
       prev.includes(color) 
         ? prev.filter(c => c !== color)
         : [...prev, color]
     );
-  };
+  }, []);
 
-  const toggleSize = (size) => {
+  const toggleSize = useCallback((size) => {
     setSelectedSizes(prev =>
       prev.includes(size) 
         ? prev.filter(s => s !== size)
         : [...prev, size]
     );
-  };
+  }, []);
 
-  // Wishlist functions
-  const toggleWishlist = (productId, productName) => {
-    if (wishlist.includes(productId)) {
-      setWishlist(wishlist.filter(id => id !== productId));
-      // You can add a toast notification here: `${productName} removed from wishlist`
-    } else {
-      setWishlist([...wishlist, productId]);
-      // You can add a toast notification here: `${productName} added to wishlist`
+  // Enhanced Wishlist function
+  const toggleWishlist = async (productId, productName) => {
+    setWishlistLoading(prev => ({ ...prev, [productId]: true }));
+    
+    const alreadyInWishlist = wishlist.includes(productId);
+    
+    try {
+      if (isLoggedIn) {
+        // Use API for logged-in users
+        if (alreadyInWishlist) {
+          // Remove from server
+          const response = await fetch(`/api/product/wishList/deleteWishList?id=${productId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.status === "success") {
+            setWishlist(prev => prev.filter(id => id !== productId));
+          } else {
+            alert(`❌ Failed: ${data.msg || "Could not remove from wishlist"}`);
+          }
+        } else {
+          // Add to server
+          const response = await fetch(`/api/product/wishList/addWishList?id=${productId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            if (data.status === "success" || data.code === "ALREADY_IN_WISHLIST") {
+              setWishlist(prev => [...prev, productId]);
+            } else {
+              alert(`❌ Failed: ${data.msg || "Server error"}`);
+            }
+          } else {
+            alert(`❌ Failed: ${data.msg || "Server error"}`);
+          }
+        }
+      } else {
+        // Use localStorage for guest users
+        if (alreadyInWishlist) {
+          const newWishlist = wishlist.filter(id => id !== productId);
+          setWishlist(newWishlist);
+          localStorage.setItem('nextshop-wishlist', JSON.stringify(newWishlist));
+        } else {
+          const newWishlist = [...wishlist, productId];
+          setWishlist(newWishlist);
+          localStorage.setItem('nextshop-wishlist', JSON.stringify(newWishlist));
+        }
+      }
+    } catch (error) {
+      console.error("Wishlist error:", error);
+      alert("❌ Failed to update wishlist. Please try again.");
+    } finally {
+      setWishlistLoading(prev => ({ ...prev, [productId]: false }));
     }
   };
 
-  const isInWishlist = (productId) => {
+  const isInWishlist = useCallback((productId) => {
     return wishlist.includes(productId);
-  };
+  }, [wishlist]);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSelectedType("all");
     setSelectedColors([]);
     setSelectedSizes([]);
     setPriceRange([0, 5000]);
     setSortBy("featured");
-  };
+  }, []);
 
-  const calculateDiscountedPrice = (price, discountPercent) => {
+  const calculateDiscountedPrice = useCallback((price, discountPercent) => {
     if (!discountPercent) return price;
     return price - (price * discountPercent / 100);
-  };
+  }, []);
 
   // Close filters when clicking outside on mobile
   useEffect(() => {
@@ -174,7 +394,7 @@ export default function ProductsGrid() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showFilters]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen" style={{
         background: "linear-gradient(to bottom, var(--primary-50), white)"
@@ -185,7 +405,7 @@ export default function ProductsGrid() {
             borderTopColor: "var(--primary-600)"
           }}></div>
           <p className="font-medium" style={{ color: "var(--primary-700)" }}>
-            Loading amazing products...
+            {authLoading ? "Checking authentication..." : "Loading amazing products..."}
           </p>
         </div>
       </div>
@@ -230,15 +450,16 @@ export default function ProductsGrid() {
                   <span>🔍</span>
                   <span>Filters ({selectedColors.length + selectedSizes.length + (selectedType !== "all" ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 5000 ? 1 : 0)})</span>
                 </>
-              )}
+              )
+              }
             </button>
             
             <div className="flex items-center gap-4">
-              <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
+              {/* <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
                 {filteredProducts.length} products
-              </div>
-              <Link 
-                href="/wishlist" 
+              </div> */}
+              {/* <Link 
+                href="/pages/wishlist" 
                 className="relative p-2 transition-all duration-300 rounded-lg hover:bg-gray-50"
                 title="View Wishlist"
               >
@@ -252,7 +473,7 @@ export default function ProductsGrid() {
                     {wishlist.length}
                   </span>
                 )}
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>
@@ -337,7 +558,7 @@ export default function ProductsGrid() {
                       <input
                         type="number"
                         value={priceRange[0]}
-                        onChange={(e) => e.target.value <= 0 ? setPriceRange([1, priceRange[1]]) : setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                        onChange={(e) => setPriceRange([Math.max(1, parseInt(e.target.value) || 0), priceRange[1]])}
                         className="w-1/2 px-4 py-2 border-2 rounded-lg"
                         style={{
                           borderColor: "var(--primary-200)",
@@ -349,7 +570,7 @@ export default function ProductsGrid() {
                       <input
                         type="number"
                         value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 5000])}
                         className="w-1/2 px-4 py-2 border-2 rounded-lg"
                         style={{
                           borderColor: "var(--primary-200)",
@@ -498,7 +719,7 @@ export default function ProductsGrid() {
                     <input
                       type="number"
                       value={priceRange[0]}
-                      onChange={(e) => e.target.value <= 0 ? setPriceRange([1, priceRange[1]]) : setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                      onChange={(e) => setPriceRange([Math.max(1, parseInt(e.target.value) || 0), priceRange[1]])}
                       className="w-1/2 px-4 py-2 border-2 rounded-lg"
                       style={{
                         borderColor: "var(--primary-200)",
@@ -518,7 +739,7 @@ export default function ProductsGrid() {
                     <input
                       type="number"
                       value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 5000])}
                       className="w-1/2 px-4 py-2 border-2 rounded-lg"
                       style={{
                         borderColor: "var(--primary-200)",
@@ -629,7 +850,7 @@ export default function ProductsGrid() {
               {/* Wishlist Counter in Desktop */}
               <div className="pt-6 mb-4" style={{ borderTop: "1px solid var(--primary-100)" }}>
                 <Link 
-                  href="/wishlist" 
+                  href="/pages/wishlist" 
                   className="flex items-center justify-between p-3 transition-all duration-300 rounded-xl hover:shadow-md group"
                   style={{ 
                     backgroundColor: 'var(--primary-25)',
@@ -644,6 +865,9 @@ export default function ProductsGrid() {
                     <div>
                       <div className="font-medium" style={{ color: 'var(--primary-800)' }}>My Wishlist</div>
                       <div className="text-sm" style={{ color: 'var(--primary-600)' }}>{wishlist.length} items saved</div>
+                      {!isLoggedIn && (
+                        <div className="text-xs" style={{ color: 'var(--warning-600)' }}>Saved locally</div>
+                      )}
                     </div>
                   </div>
                   <span className="text-lg font-bold transition-transform group-hover:scale-110" 
@@ -670,7 +894,7 @@ export default function ProductsGrid() {
 
           {/* Main Content */}
           <div className="lg:w-3/4">
-            {/* Sorting Bar - Updated for mobile */}
+            {/* Sorting Bar - Updated with login status indicator */}
             <div className="p-4 mb-8 shadow-lg rounded-2xl lg:p-6" style={{
               backgroundColor: "white",
               border: "1px solid var(--primary-100)"
@@ -681,6 +905,11 @@ export default function ProductsGrid() {
                   <span className="ml-2 font-medium" style={{ color: "var(--primary-600)" }}>
                     products found
                   </span>
+                  {!isLoggedIn && (
+                    <span className="ml-2 text-sm" style={{ color: "var(--warning-600)" }}>
+                      (Wishlist saved locally)
+                    </span>
+                  )}
                   {(selectedType !== "all" || selectedColors.length > 0 || selectedSizes.length > 0 || priceRange[0] > 0 || priceRange[1] < 5000) && (
                     <button 
                       onClick={clearFilters}
@@ -763,6 +992,7 @@ export default function ProductsGrid() {
                   const discountedPrice = calculateDiscountedPrice(product.price, product.discountPercent);
                   const isDiscounted = product.discountPercent > 0;
                   const inWishlist = isInWishlist(product.id);
+                  const isLoading = wishlistLoading[product.id];
                   
                   return (
                     <div key={product.id} className="overflow-hidden transition-all duration-500 shadow-lg group rounded-xl lg:rounded-2xl hover:-translate-y-2" style={{
@@ -788,14 +1018,15 @@ export default function ProductsGrid() {
                               className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
                             />
                             
-                            {/* Wishlist Icon - Appears on hover */}
+                            {/* Enhanced Wishlist Icon */}
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 toggleWishlist(product.id, product.name);
                               }}
-                              className="absolute z-10 flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 opacity-0 top-3 right-3 group-hover:opacity-100 hover:scale-110 text-slate-600"
+                              disabled={isLoading}
+                              className="absolute z-10 flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 opacity-0 top-3 right-3 group-hover:opacity-100 hover:scale-110 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                               title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
                             >
                               <div className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg"
@@ -803,19 +1034,22 @@ export default function ProductsGrid() {
                                   backgroundColor: 'white',
                                   boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                                 }}>
-                                <span className={`text-xl transition-all duration-300 ${inWishlist ? 'scale-125' : ''}`}
-                                  style={{
-                                    color: inWishlist ? 'var(--error-500)' : 'var(--primary-500)'
-                                  }}>
-                                  {inWishlist ? '❤️' : '🤍'}
-                                </span>
+                                {isLoading ? (
+                                  <span className="text-xs">⏳</span>
+                                ) : (
+                                  <span className={`text-xl transition-all duration-300 ${inWishlist ? 'scale-125' : ''}`}
+                                    style={{
+                                      color: inWishlist ? 'var(--error-500)' : 'var(--primary-500)'
+                                    }}>
+                                    {inWishlist ? '❤️' : '🤍'}
+                                  </span>
+                                )}
                               </div>
-                              <span className="mt-1 text-xs font-medium whitespace-nowrap"
+                              <span className="mt-1 text-xs font-medium whitespace-nowrap text-slate-700"
                                 style={{
-                                  color: 'white',
                                   textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                                 }}>
-                                {inWishlist ? 'Added' : 'Wishlist'}
+                                {isLoading ? 'Updating...' : (inWishlist ? 'Added' : 'Wishlist')}
                               </span>
                             </button>
                             
@@ -864,15 +1098,20 @@ export default function ProductsGrid() {
                             {/* Wishlist Indicator - Always visible */}
                             <button
                               onClick={() => toggleWishlist(product.id, product.name)}
-                              className="p-2 ml-auto transition-all duration-300 rounded-full hover:bg-gray-50 text-slate-600"
+                              disabled={isLoading}
+                              className="p-2 ml-auto transition-all duration-300 rounded-full hover:bg-gray-50 text-slate-600 disabled:opacity-50"
                               title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
                             >
-                              <span className={`text-lg transition-transform duration-300 hover:scale-110 ${inWishlist ? 'animate-pulse' : ''}`}
-                                style={{
-                                  color: inWishlist ? 'var(--error-500)' : 'var(--primary-400)'
-                                }}>
-                                {inWishlist ? '❤️' : '🤍'}
-                              </span>
+                              {isLoading ? (
+                                <span className="text-xs">⏳</span>
+                              ) : (
+                                <span className={`text-lg transition-transform duration-300 hover:scale-110 ${inWishlist ? 'animate-pulse' : ''}`}
+                                  style={{
+                                    color: inWishlist ? 'var(--error-500)' : 'var(--primary-400)'
+                                  }}>
+                                  {inWishlist ? '❤️' : '🤍'}
+                                </span>
+                              )}
                             </button>
                           </div>
                         )}
@@ -910,8 +1149,6 @@ export default function ProductsGrid() {
                             </span>
                           )}
                         </div>
-
-                        
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 lg:gap-3">
@@ -968,15 +1205,17 @@ export default function ProductsGrid() {
           </p>
           <p style={{ color: "var(--primary-300)" }}>
             Showing <span className="font-bold" style={{ color: "var(--accent-300)" }}>{filteredProducts.length}</span> amazing products curated just for you
+            {!isLoggedIn && (
+              <span className="ml-2 text-sm" style={{ color: "var(--warning-300)" }}>
+                (Login to sync wishlist)
+              </span>
+            )}
           </p>
-          <div className="flex justify-center gap-6 mt-4" style={{ color: "var(--primary-400)" }}>
+          <div className="flex justify-center gap-6 mt-4 mb-12 md:mb-0" style={{ color: "var(--primary-400)" }}>
             <span>🔒 Secure Checkout</span>
             <span>🚚 Free Shipping</span>
-            <span>🔄 Easy Returns</span>
-            <Link href="/wishlist" className="flex items-center gap-1 transition-colors hover:text-white">
-              <span>❤️</span>
-              <span>Wishlist ({wishlist.length})</span>
-            </Link>
+            <span>🔄 Easy Returns</span> 
+              
           </div>
         </div>
       </div>

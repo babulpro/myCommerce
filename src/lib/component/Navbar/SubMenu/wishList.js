@@ -1,6 +1,34 @@
-import React from "react"
+"use client"
+import React, { useEffect, useState } from "react"
 
 export default function Wishlist(){
+     const [wishlistItems, setWishlistItems] = useState([]);
+         useEffect(() => {
+            const fetchWishlist = async () => {
+              try { 
+                const response = await fetch('/api/product/wishList/getWishList');
+                
+                if (!response.ok) {
+                  setWishlistItems([])
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === "success") {
+                  // Extract product items from the response - data.data contains the array
+                  const items = data.data || [];
+                  setWishlistItems(items);
+                } else {
+                  setWishlistItems([])
+                }
+              } catch (error) {
+                 
+                setWishlistItems([]);
+              } 
+            };
+            
+            fetchWishlist();
+          }, []); 
     return(
       
             <div className="hidden lg:block dropdown dropdown-end">
@@ -27,7 +55,7 @@ export default function Wishlist(){
                             backgroundColor: 'var(--secondary-100)', 
                             color: 'var(--secondary-700)' 
                             }}>
-                            3 items
+                            {wishlistItems.length}
                             </span>
                         </h3>
                         </div>
