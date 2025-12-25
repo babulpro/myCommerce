@@ -455,10 +455,10 @@ export default function ProductsGrid() {
             </button>
             
             <div className="flex items-center gap-4">
-              {/* <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
+              <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
                 {filteredProducts.length} products
-              </div> */}
-              {/* <Link 
+              </div>
+              <Link 
                 href="/pages/wishlist" 
                 className="relative p-2 transition-all duration-300 rounded-lg hover:bg-gray-50"
                 title="View Wishlist"
@@ -473,7 +473,7 @@ export default function ProductsGrid() {
                     {wishlist.length}
                   </span>
                 )}
-              </Link> */}
+              </Link>
             </div>
           </div>
         </div>
@@ -1020,38 +1020,38 @@ export default function ProductsGrid() {
                             
                             {/* Enhanced Wishlist Icon */}
                             <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                toggleWishlist(product.id, product.name);
-                              }}
-                              disabled={isLoading}
-                              className="absolute z-10 flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 opacity-0 top-3 right-3 group-hover:opacity-100 hover:scale-110 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-                            >
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg"
-                                style={{
-                                  backgroundColor: 'white',
-                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                                }}>
-                                {isLoading ? (
-                                  <span className="text-xs">⏳</span>
-                                ) : (
-                                  <span className={`text-xl transition-all duration-300 ${inWishlist ? 'scale-125' : ''}`}
-                                    style={{
-                                      color: inWishlist ? 'var(--error-500)' : 'var(--primary-500)'
-                                    }}>
-                                    {inWishlist ? '❤️' : '🤍'}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="mt-1 text-xs font-medium whitespace-nowrap text-slate-700"
-                                style={{
-                                  textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                                }}>
-                                {isLoading ? 'Updating...' : (inWishlist ? 'Added' : 'Wishlist')}
-                              </span>
-                            </button>
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleWishlist(product.id, product.name);
+                                }}
+                                disabled={isLoading}
+                                className="absolute z-10 flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 opacity-100 lg:opacity-0 top-3 right-3 lg:group-hover:opacity-100 hover:scale-110 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+                              >
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg"
+                                  style={{
+                                    backgroundColor: 'white',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                  }}>
+                                  {isLoading ? (
+                                    <span className="text-xs">⏳</span>
+                                  ) : (
+                                    <span className={`text-xl transition-all duration-300 ${inWishlist ? 'scale-125' : ''}`}
+                                      style={{
+                                        color: inWishlist ? 'var(--error-500)' : 'var(--primary-500)'
+                                      }}>
+                                      {inWishlist ? '❤️' : '🤍'}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="mt-1 text-xs font-medium whitespace-nowrap text-slate-700"
+                                  style={{
+                                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                                  }}>
+                                  {isLoading ? 'Updating...' : (inWishlist ? 'Added' : 'Wishlist')}
+                                </span>
+                              </button>
                             
                             {/* Badges */}
                             <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
