@@ -134,7 +134,7 @@ model  Wishlist{
     updatedAt DateTime @updatedAt
     @@unique([userId, productId])
 
-  }
+}
 
 
 model Order{
@@ -186,7 +186,7 @@ model Address{
    
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
- }
+}
 
 model Review{
     id        String   @id @default(auto()) @map("_id") @db.ObjectId

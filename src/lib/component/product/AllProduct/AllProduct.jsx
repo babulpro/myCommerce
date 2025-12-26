@@ -1024,7 +1024,7 @@ export default function ProductsGrid() {
                                   e.preventDefault();
                                   e.stopPropagation();
                                   toggleWishlist(product.id, product.name);
-                                }}
+                                }} 
                                 disabled={isLoading}
                                 className="absolute z-10 flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 opacity-100 lg:opacity-0 top-3 right-3 lg:group-hover:opacity-100 hover:scale-110 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}

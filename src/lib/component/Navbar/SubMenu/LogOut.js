@@ -113,7 +113,7 @@ export default function Logout() {
                                 {/* Additional options */}
                                 <li>
                                     <Link 
-                                        href="/user/dashboard/wishlist" 
+                                        href="/pages/wishlist" 
                                         onClick={handleLinkClick}
                                         className="flex items-center gap-3 p-3 mb-1 transition-all duration-200 rounded-xl hover:shadow-md" 
                                         style={{ backgroundColor: 'var(--primary-25)' }}
