@@ -18,43 +18,45 @@ export default function ProductsGrid() {
   const [authLoading, setAuthLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState({});
 
+
+
   // Check authentication
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        setAuthLoading(true);
-        const response = await fetch('/api/auth/check');
-        const data = await response.json();
-        const loggedIn = data.isLoggedIn;
-        setIsLoggedIn(loggedIn);
-        
-        if (loggedIn) {
-          // Load server wishlist first
-          await loadServerWishlist();
-          
-          // Check if there's local wishlist to sync
-          const localWishlist = localStorage.getItem('nextshop-wishlist');
-          if (localWishlist) {
-            // Wait 1 second to ensure server wishlist is fully loaded
-            setTimeout(async () => {
-              await syncLocalToServer();
-            }, 1000);
+      useEffect(() => {
+        const checkAuth = async () => {
+          try {
+            setAuthLoading(true);
+            const response = await fetch('/api/auth/check');
+            const data = await response.json();
+            const loggedIn = data.isLoggedIn;
+            setIsLoggedIn(loggedIn);
+            
+            if (loggedIn) {
+              // Load server wishlist first
+              await loadServerWishlist();
+              
+              // Check if there's local wishlist to sync
+              const localWishlist = localStorage.getItem('nextshop-wishlist');
+              if (localWishlist) {
+                // Wait 1 second to ensure server wishlist is fully loaded
+                setTimeout(async () => {
+                  await syncLocalToServer();
+                }, 1000);
+              }
+            } else {
+              // For guest users, only load from localStorage
+              loadLocalWishlist();
+            }
+          } catch (error) {
+            console.error("Auth check failed:", error);
+            setIsLoggedIn(false);
+            loadLocalWishlist();
+          } finally {
+            setAuthLoading(false);
           }
-        } else {
-          // For guest users, only load from localStorage
-          loadLocalWishlist();
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        setIsLoggedIn(false);
-        loadLocalWishlist();
-      } finally {
-        setAuthLoading(false);
-      }
-    };
-    
-    checkAuth();
-  }, []);
+        };
+        
+        checkAuth();
+      }, []);
 
   // Load wishlist from localStorage for guest users
   const loadLocalWishlist = () => {
@@ -275,6 +277,41 @@ export default function ProductsGrid() {
   const uniqueColors = [...new Set(allColors)];
   const allSizes = products.flatMap(p => p.size || []).filter(Boolean);
   const uniqueSizes = [...new Set(allSizes)].sort();
+
+
+
+  const handleAddToCart = async (id) => {
+        
+        try {
+            const response = await fetch(`/api/product/cart/addCart?id=${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body:JSON.stringify({
+                  quantity:1,
+                  size:"M",
+                  color:"BLACK"
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.status === "success") {
+                // Show success message
+                alert(result.msg || "Item added to cart successfully!");
+                
+                // You could also update a global cart counter here
+                // dispatch({ type: 'UPDATE_CART_COUNT', payload: result.data.cartSummary?.totalItems });
+                
+            } else {
+                alert(result.msg || "Failed to add item to cart");
+            }
+        } catch (error) {
+            alert("An error occurred while adding to cart");
+        } 
+    };
+
 
   const toggleColor = useCallback((color) => {
     setSelectedColors(prev =>
@@ -1152,7 +1189,7 @@ export default function ProductsGrid() {
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 lg:gap-3">
-                          <button className="flex-1 px-4 lg:px-6 py-2 lg:py-3 text-white rounded-lg lg:rounded-xl hover:shadow-xl transition-all duration-300 font-bold transform hover:-translate-y-0.5" 
+                          <button onClick={(e)=> handleAddToCart(`${product.id}`)} className="flex-1 px-4 lg:px-6 py-2 lg:py-3 text-white rounded-lg lg:rounded-xl hover:shadow-xl transition-all duration-300 font-bold transform hover:-translate-y-0.5" 
                             style={{
                               background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
                               boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"

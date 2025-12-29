@@ -35,9 +35,23 @@ export default function CartPage() {
         fetchCart();
     }, []);
 
-    // Update quantity
+    // Optimized: Update quantity without full refresh
     const updateQuantity = async (cartItemId, newQuantity) => {
         if (newQuantity < 1 || newQuantity > 99) return;
+        
+        // Update local state immediately for instant UI feedback
+        setCartData(prev => {
+            if (!prev?.items) return prev;
+            
+            return {
+                ...prev,
+                items: prev.items.map(item => 
+                    item.id === cartItemId 
+                        ? { ...item, quantity: newQuantity }
+                        : item
+                )
+            };
+        });
         
         setUpdatingItems(prev => ({ ...prev, [cartItemId]: true }));
         
@@ -52,22 +66,37 @@ export default function CartPage() {
             
             const result = await response.json();
             
-            if (result.status === "success") {
-                await fetchCart(); // Refresh cart data
-            } else {
+            if (result.status !== "success") {
+                // If API fails, revert to original data
+                fetchCart(); // Refresh to get correct data
                 alert(result.msg || "Failed to update quantity");
             }
         } catch (error) {
             console.error("Update error:", error);
+            // Revert on error
+            fetchCart();
             alert("Failed to update quantity");
         } finally {
             setUpdatingItems(prev => ({ ...prev, [cartItemId]: false }));
         }
     };
 
-    // Remove item from cart
+    // Optimized: Remove item without full refresh
     const removeItem = async (cartItemId) => {
         if (!confirm("Are you sure you want to remove this item from your cart?")) return;
+        
+        // Save the original item for potential rollback
+        const itemToRemove = cartData?.items?.find(item => item.id === cartItemId);
+        
+        // Remove from local state immediately
+        setCartData(prev => {
+            if (!prev?.items) return prev;
+            
+            return {
+                ...prev,
+                items: prev.items.filter(item => item.id !== cartItemId)
+            };
+        });
         
         setRemovingItems(prev => ({ ...prev, [cartItemId]: true }));
         
@@ -78,13 +107,29 @@ export default function CartPage() {
             
             const result = await response.json();
             
-            if (result.status === "success") {
-                await fetchCart(); // Refresh cart data
-            } else {
+            if (result.status !== "success") {
+                // If API fails, add the item back
+                setCartData(prev => {
+                    if (!prev?.items) return prev;
+                    
+                    return {
+                        ...prev,
+                        items: [...prev.items, itemToRemove].sort((a, b) => a.id - b.id)
+                    };
+                });
                 alert(result.msg || "Failed to remove item");
             }
         } catch (error) {
             console.error("Remove error:", error);
+            // Add item back on error
+            setCartData(prev => {
+                if (!prev?.items) return prev;
+                
+                return {
+                    ...prev,
+                    items: [...prev.items, itemToRemove].sort((a, b) => a.id - b.id)
+                };
+            });
             alert("Failed to remove item");
         } finally {
             setRemovingItems(prev => ({ ...prev, [cartItemId]: false }));
@@ -109,8 +154,8 @@ export default function CartPage() {
             discount += (itemPrice * itemDiscount / 100) * item.quantity;
         });
         
-        const shipping = subtotal > 1000 ? 0 : 60; // Free shipping over 1000
-        const tax = subtotal * 0.05; // 5% tax
+        const shipping = subtotal > 1000 ? 0 : 60;
+        const tax = subtotal * 0.05;
         const total = subtotal + shipping + tax;
         
         return {
@@ -250,7 +295,7 @@ export default function CartPage() {
                                         Free shipping on orders over {formatPrice(1000)}
                                     </h3>
                                     <p className="text-sm" style={{ color: "var(--accent-600)" }}>
-                                        You're {formatPrice(1000 - totals.subtotal)} away from free shipping!
+                                        You're {formatPrice(Math.max(0, 1000 - totals.subtotal))} away from free shipping!
                                     </p>
                                 </div>
                             </div>
@@ -304,7 +349,7 @@ export default function CartPage() {
                                                                 <h3 
                                                                     className="text-lg font-bold cursor-pointer hover:underline"
                                                                     style={{ color: "var(--primary-800)" }}
-                                                                    onClick={() => router.push(`/product/${item.product.id}`)}
+                                                                    onClick={() => router.push(`/pages/product/detail/${item.product.id}`)}
                                                                 >
                                                                     {item.product.name}
                                                                 </h3>
@@ -564,35 +609,6 @@ export default function CartPage() {
                                 >
                                     Continue Shopping
                                 </button>
-                            </div>
-
-                            {/* Promo Code Section (Optional) */}
-                            <div className="p-6 mt-6 rounded-xl" style={{
-                                backgroundColor: "var(--primary-50)",
-                                border: "1px solid var(--primary-200)"
-                            }}>
-                                <h3 className="mb-3 font-bold" style={{ color: "var(--primary-800)" }}>
-                                    Have a promo code?
-                                </h3>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Enter promo code"
-                                        className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                                        style={{
-                                            borderColor: "var(--primary-300)",
-                                            backgroundColor: "white"
-                                        }}
-                                    />
-                                    <button
-                                        className="px-4 py-2 font-medium text-white rounded-lg"
-                                        style={{
-                                            backgroundColor: "var(--primary-700)"
-                                        }}
-                                    >
-                                        Apply
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>

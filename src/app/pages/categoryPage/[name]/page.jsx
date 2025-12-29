@@ -26,6 +26,40 @@ export default function CategoryPage() {
   const categoryId = searchParams.get('id');
   const categoryName = params.category ? decodeURIComponent(params.category) : '';
 
+  
+  const handleAddToCart = async (id) => {
+        
+        try {
+            const response = await fetch(`/api/product/cart/addCart?id=${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body:JSON.stringify({
+                  quantity:1,
+                  size:"M",
+                  color:"BLACK"
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.status === "success") {
+                // Show success message
+                alert(result.msg || "Item added to cart successfully!");
+                
+                // You could also update a global cart counter here
+                // dispatch({ type: 'UPDATE_CART_COUNT', payload: result.data.cartSummary?.totalItems });
+                
+            } else {
+                alert(result.msg || "Failed to add item to cart");
+            }
+        } catch (error) {
+            alert("An error occurred while adding to cart");
+        } 
+    };
+
+    
   // Check authentication
   useEffect(() => {
     const checkAuth = async () => {
@@ -1080,7 +1114,7 @@ export default function CategoryPage() {
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 lg:gap-3">
-                          <button className="flex-1 px-4 lg:px-6 py-2 lg:py-3 text-white rounded-lg lg:rounded-xl hover:shadow-xl transition-all duration-300 font-bold transform hover:-translate-y-0.5" 
+                          <button onClick={(e)=>handleAddToCart(`${product.id}`)} className="flex-1 px-4 lg:px-6 py-2 lg:py-3 text-white rounded-lg lg:rounded-xl hover:shadow-xl transition-all duration-300 font-bold transform hover:-translate-y-0.5" 
                             style={{
                               background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
                               boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"

@@ -33,13 +33,24 @@ export default function ProfileCart() {
         fetchCartData();
     }, []);
 
-    // Calculate total items in cart
-    const calculateTotalItems = () => {
+    // Get total number of unique cart items
+    const getUniqueItemCount = () => {
         if (!cartData?.items?.length) return 0;
-        return cartData.items.reduce((total, item) => total + item.quantity, 0);
+        return cartData.items.length;
     };
 
-    // Calculate total price
+    const itemCount = getUniqueItemCount();
+
+    // Format price function
+    const formatPrice = (price) => {
+        return new Intl.NumberFormat('en-BD', {
+            style: 'currency',
+            currency: cartData?.items?.[0]?.product?.currency || 'BDT',
+            minimumFractionDigits: 0,
+        }).format(price);
+    };
+
+    // Calculate total price for preview
     const calculateTotalPrice = () => {
         if (!cartData?.items?.length) return 0;
         
@@ -51,17 +62,7 @@ export default function ProfileCart() {
         }, 0);
     };
 
-    const totalItems = calculateTotalItems();
     const totalPrice = calculateTotalPrice();
-
-    // Format price function
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('en-BD', {
-            style: 'currency',
-            currency: cartData?.items?.[0]?.product?.currency || 'BDT',
-            minimumFractionDigits: 0,
-        }).format(price);
-    };
 
     // Handle click to navigate to cart page
     const handleCartClick = () => {
@@ -71,7 +72,7 @@ export default function ProfileCart() {
     if (loading) {
         return (
             <div 
-                className="relative p-2 transition-colors rounded-lg cursor-pointer hover:bg-primary-50"
+                className="relative hidden p-2 transition-colors rounded-lg cursor-pointer lg:block hover:bg-primary-50"
                 onClick={handleCartClick}
             >
                 <ShoppingCart className="w-6 h-6" style={{ color: "var(--primary-600)" }} />
@@ -83,7 +84,7 @@ export default function ProfileCart() {
     }
 
     return (
-        <div className="relative group">
+        <div className="relative hidden lg:block group">
             {/* Cart Icon with Badge */}
             <div 
                 className="p-2 transition-colors rounded-lg cursor-pointer hover:bg-primary-50"
@@ -92,11 +93,11 @@ export default function ProfileCart() {
                 <ShoppingCart className="w-6 h-6" style={{ color: "var(--primary-600)" }} />
                 
                 {/* Cart Item Count Badge */}
-                {totalItems > 0 && (
+                {itemCount > 0 && (
                     <div className="absolute flex items-center justify-center h-5 px-1 text-xs font-bold text-white rounded-full -top-1 -right-1 min-w-5" style={{
                         backgroundColor: "var(--accent-600)"
                     }}>
-                        {totalItems > 99 ? '99+' : totalItems}
+                        {itemCount > 99 ? '99+' : itemCount}
                     </div>
                 )}
             </div>
@@ -116,7 +117,7 @@ export default function ProfileCart() {
                             backgroundColor: "var(--primary-100)",
                             color: "var(--primary-700)"
                         }}>
-                            {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                            {itemCount} {itemCount === 1 ? 'item' : 'items'}
                         </span>
                     </div>
 
@@ -164,16 +165,9 @@ export default function ProfileCart() {
                                                     />
                                                 </div>
                                                 <div className="flex items-center justify-between mt-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-bold" style={{ color: "var(--accent-600)" }}>
-                                                            {formatPrice(discountedPrice * item.quantity)}
-                                                        </span>
-                                                        {/* {itemDiscount > 0 && (
-                                                            <span className="text-xs line-through" style={{ color: "var(--primary-400)" }}>
-                                                                {formatPrice(itemPrice * item.quantity)}
-                                                            </span>
-                                                        )} */}
-                                                    </div>
+                                                    <span className="text-sm font-bold" style={{ color: "var(--accent-600)" }}>
+                                                        {formatPrice(discountedPrice)}
+                                                    </span>
                                                     <span className="text-sm" style={{ color: "var(--primary-600)" }}>
                                                         Qty: {item.quantity}
                                                     </span>
