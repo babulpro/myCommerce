@@ -18,6 +18,8 @@ export default function Page() {
     const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
+    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+    const [orderNote, setOrderNote] = useState("");
 
     useEffect(() => {
         const fetchProductDetails = async () => {
@@ -95,12 +97,55 @@ export default function Page() {
     };
 
     const handleBuyNow = async () => {
-        // First add to cart
-        await handleAddToCart();
-        // Then redirect to checkout
-        router.push("/checkout");
-    };
+    if (!product || product.inventory === 0) {
+        alert("Product is out of stock!");
+        return;
+    }
 
+    if (quantity > product.inventory) {
+        alert(`Only ${product.inventory} items available in stock`);
+        return;
+    }
+
+    // Ask for order note (optional)
+    const note = window.prompt("Add a note for your order (optional):", "");
+    if (note === null) return; // User cancelled
+
+    setIsPlacingOrder(true);
+
+    try {
+        const response = await fetch(`/api/product/order/newOrder?productId=${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                quantity: Number(quantity),
+                size: selectedSize.toUpperCase(),
+                color: selectedColor.toUpperCase(),
+                customerNote: note || ""
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.status === "success") {
+            // Show success message with order details
+            alert(`✅ Order placed successfully!\nOrder ID: ${result.order.id}\nTotal: ${result.order.totalAmount}\n\nCash on delivery will be collected upon delivery.`);
+            
+            // Optionally redirect to order confirmation page
+            router.push(`/user/dashboard/order`);
+            
+        } else {
+            alert(`❌ ${result.msg || "Failed to place order"}`);
+        }
+    } catch (error) {
+        console.error("Buy Now error:", error);
+        alert("❌ An error occurred while placing order. Please try again.");
+    } finally {
+        setIsPlacingOrder(false);
+    }
+};
     const toggleWishlist = () => {
         setIsWishlisted(!isWishlisted);
         alert(isWishlisted ? "Removed from wishlist" : "Added to wishlist!");
@@ -581,19 +626,38 @@ export default function Page() {
                                 </button>
                                 <button
                                     onClick={handleBuyNow}
-                                    disabled={product.inventory === 0}
+                                    disabled={product.inventory === 0 || isPlacingOrder}
                                     className={`flex items-center justify-center gap-3 px-6 py-4 font-bold transition-all duration-300 rounded-xl hover:shadow-xl active:scale-95 sm:px-8 ${
-                                        product.inventory === 0 ? 'opacity-70 cursor-not-allowed' : ''
+                                        product.inventory === 0 || isPlacingOrder ? 'opacity-70 cursor-not-allowed' : ''
                                     }`}
                                     style={{
-                                        background: product.inventory === 0
+                                        background: product.inventory === 0 || isPlacingOrder
                                             ? "linear-gradient(to right, var(--neutral-400), var(--neutral-500))"
                                             : "linear-gradient(to right, var(--primary-800), var(--primary-900))",
                                         color: "white",
                                         boxShadow: "0 4px 6px -1px rgba(15, 23, 42, 0.2)"
                                     }}
-                                >
-                                    ⚡ {product.inventory === 0 ? 'Out of Stock' : 'Buy Now'}
+                                    onMouseEnter={(e) => {
+                                        if (product.inventory !== 0 && !isPlacingOrder) {
+                                            e.currentTarget.style.boxShadow = "0 10px 25px -5px rgba(15, 23, 42, 0.4)";
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (product.inventory !== 0 && !isPlacingOrder) {
+                                            e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(15, 23, 42, 0.2)";
+                                        }
+                                    }}
+                                                                >
+                                    {isPlacingOrder ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 rounded-full border-t-transparent animate-spin"></div>
+                                            Placing Order...
+                                        </>
+                                    ) : (
+                                        <>
+                                            ⚡ {product.inventory === 0 ? 'Out of Stock' : 'Buy Now (COD)'}
+                                        </>
+                                    )}
                                 </button>
                             </div>
 

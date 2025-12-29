@@ -19,13 +19,12 @@ export async function POST(req) {
     }
 
     // Validate quantity
-    if(data){
     if (data.quantity && (data.quantity < 1 || data.quantity > 99)) {
       return NextResponse.json(
         { status: "fail", msg: "Quantity must be between 1 and 99" },
         { status: 400 }
       );
-    }}
+    }
 
     // 3. Authentication
     const cookieStore = await cookies();

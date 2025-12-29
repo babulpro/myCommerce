@@ -1,337 +1,672 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { 
+  Package, 
+  Truck, 
+  CheckCircle, 
+  Clock, 
+  XCircle, 
+  RefreshCw,
+  Filter,
+  Calendar,
+  Eye,
+  Star,
+  MapPin,
+  CreditCard,
+  ChevronRight,
+  ChevronDown,
+  Download,
+  Printer,
+  MessageSquare
+} from "lucide-react";
+
 export default function OrdersPage() {
-    const orders = [
-        {
-            id: "ORD-7841",
-            date: "Dec 12, 2024",
-            items: 3,
-            total: 245.99,
-            status: "Delivered",
-            statusColor: "var(--success-500)",
-            tracking: "TRK-78411234",
-            estimatedDelivery: "Dec 10, 2024"
-        },
-        {
-            id: "ORD-7840",
-            date: "Dec 10, 2024",
-            items: 2,
-            total: 189.50,
-            status: "Processing",
-            statusColor: "var(--warning-500)",
-            tracking: "TRK-78401234",
-            estimatedDelivery: "Dec 15, 2024"
-        },
-        {
-            id: "ORD-7839",
-            date: "Dec 8, 2024",
-            items: 1,
-            total: 320.75,
-            status: "Shipped",
-            statusColor: "var(--info-500)",
-            tracking: "TRK-78391234",
-            estimatedDelivery: "Dec 13, 2024"
-        },
-        {
-            id: "ORD-7838",
-            date: "Dec 5, 2024",
-            items: 4,
-            total: 145.25,
-            status: "Delivered",
-            statusColor: "var(--success-500)",
-            tracking: "TRK-78381234",
-            estimatedDelivery: "Dec 8, 2024"
-        },
-        {
-            id: "ORD-7837",
-            date: "Dec 3, 2024",
-            items: 1,
-            total: 89.99,
-            status: "Cancelled",
-            statusColor: "var(--error-500)",
-            tracking: null,
-            estimatedDelivery: null
-        }
-    ]
+  const router = useRouter();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [expandedOrder, setExpandedOrder] = useState(null);
+  const [activeStatusFilter, setActiveStatusFilter] = useState("ALL");
+  const [activeTimeFilter, setActiveTimeFilter] = useState("LAST_30_DAYS");
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    totalSpent: 0,
+    pendingOrders: 0,
+    deliveredOrders: 0
+  });
 
-    const orderFilters = ["All", "Delivered", "Processing", "Shipped", "Cancelled"]
-    const timeFilters = ["Last 30 days", "Last 3 months", "Last 6 months", "2024"]
+  const orderFilters = [
+    { value: "ALL", label: "All Orders", icon: Package },
+    { value: "PENDING", label: "Pending", icon: Clock, color: "var(--warning-500)" },
+    { value: "PROCESSING", label: "Processing", icon: RefreshCw, color: "var(--info-500)" },
+    { value: "SHIPPED", label: "Shipped", icon: Truck, color: "var(--primary-500)" },
+    { value: "DELIVERED", label: "Delivered", icon: CheckCircle, color: "var(--success-500)" },
+    { value: "CANCELLED", label: "Cancelled", icon: XCircle, color: "var(--error-500)" },
+  ];
 
+  const timeFilters = [
+    { value: "LAST_30_DAYS", label: "Last 30 days" },
+    { value: "LAST_3_MONTHS", label: "Last 3 months" },
+    { value: "LAST_6_MONTHS", label: "Last 6 months" },
+    { value: "THIS_YEAR", label: "This Year" },
+    { value: "ALL_TIME", label: "All Time" },
+  ];
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }).format(price);
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'PENDING': return 'var(--warning-500)';
+      case 'PROCESSING': return 'var(--info-500)';
+      case 'SHIPPED': return 'var(--primary-500)';
+      case 'DELIVERED': return 'var(--success-500)';
+      case 'CANCELLED': return 'var(--error-500)';
+      default: return 'var(--neutral-500)';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case 'PENDING': return Clock;
+      case 'PROCESSING': return RefreshCw;
+      case 'SHIPPED': return Truck;
+      case 'DELIVERED': return CheckCircle;
+      case 'CANCELLED': return XCircle;
+      default: return Package;
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/product/order/newOrder?status=${activeStatusFilter}&time=${activeTimeFilter}`);
+      const data = await response.json();
+      
+      if (data.status === "success") {
+        setOrders(data.orders);
+        calculateStats(data.orders);
+      } else {
+        setError("Failed to fetch orders");
+      }
+    } catch (err) {
+      setError("Failed to load orders. Please try again.");
+      console.error("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateStats = (ordersList) => {
+    const stats = {
+      totalOrders: ordersList.length,
+      totalSpent: ordersList.reduce((sum, order) => sum + order.totalAmount, 0),
+      pendingOrders: ordersList.filter(order => order.status === 'PENDING').length,
+      deliveredOrders: ordersList.filter(order => order.status === 'DELIVERED').length,
+    };
+    setStats(stats);
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    if (!confirm("Are you sure you want to cancel this order?")) return;
+    
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      
+      if (data.status === "success") {
+        alert("Order cancelled successfully!");
+        fetchOrders(); // Refresh orders
+      } else {
+        alert(data.msg || "Failed to cancel order");
+      }
+    } catch (err) {
+      alert("An error occurred. Please try again.");
+    }
+  };
+
+  const toggleOrderDetails = (orderId) => {
+    setExpandedOrder(expandedOrder === orderId ? null : orderId);
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [activeStatusFilter, activeTimeFilter]);
+
+  if (loading && orders.length === 0) {
     return (
-        <div className="min-h-screen p-4 md:p-6" style={{ backgroundColor: 'var(--primary-25)' }}>
-            <div className="mx-auto max-w-7xl">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="mb-2 text-3xl font-bold" style={{ color: 'var(--primary-900)' }}>
-                        My Orders
-                    </h1>
-                    <p className="text-lg" style={{ color: 'var(--primary-600)' }}>
-                        Track and manage all your orders
-                    </p>
-                </div>
+      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--primary-25)' }}>
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-6 border-4 rounded-full animate-spin" style={{
+            borderColor: "var(--primary-400)",
+            borderTopColor: "var(--accent-600)"
+          }}></div>
+          <p className="text-lg font-bold" style={{ color: "var(--primary-700)" }}>
+            Loading your orders...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-                {/* Filters */}
-                <div className="p-6 mb-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-                    <div className="flex flex-col gap-6 md:flex-row">
-                        <div className="flex-1">
-                            <h3 className="mb-3 font-medium" style={{ color: 'var(--primary-700)' }}>
-                                Order Status
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {orderFilters.map((filter) => (
-                                    <button key={filter} 
-                                            className="px-4 py-2 transition-all duration-300 border rounded-lg"
-                                            style={{ 
-                                                borderColor: filter === "All" ? 'var(--accent-400)' : 'var(--primary-200)',
-                                                backgroundColor: filter === "All" ? 'var(--accent-50)' : 'transparent',
-                                                color: filter === "All" ? 'var(--accent-700)' : 'var(--primary-700)'
-                                            }}>
-                                        {filter}
-                                    </button>
-                                ))}
-                            </div>
+  return (
+    <div className="min-h-screen p-4 md:p-6" style={{ backgroundColor: 'var(--primary-25)' }}>
+      <div className="mx-auto max-w-7xl">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <h1 className="mb-2 text-3xl font-bold" style={{ color: 'var(--primary-900)' }}>
+                My Orders
+              </h1>
+              <p className="text-lg" style={{ color: 'var(--primary-600)' }}>
+                Track, manage, and review all your orders
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button className="flex items-center gap-2 px-4 py-2 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95"
+                      style={{ 
+                        borderColor: 'var(--primary-200)',
+                        color: 'var(--primary-700)'
+                      }}>
+                <Download size={16} />
+                Export
+              </button>
+              <button className="flex items-center gap-2 px-4 py-2 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95"
+                      style={{ 
+                        borderColor: 'var(--primary-200)',
+                        color: 'var(--primary-700)'
+                      }}>
+                <Printer size={16} />
+                Print
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>Total Orders</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--primary-900)' }}>{stats.totalOrders}</p>
+              </div>
+              <div className="p-3 rounded-full" style={{ backgroundColor: 'var(--primary-100)' }}>
+                <Package size={20} style={{ color: 'var(--primary-600)' }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>Total Spent</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--primary-900)' }}>
+                  {formatPrice(stats.totalSpent)}
+                </p>
+              </div>
+              <div className="p-3 rounded-full" style={{ backgroundColor: 'var(--accent-100)' }}>
+                <CreditCard size={20} style={{ color: 'var(--accent-600)' }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>Pending</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--warning-600)' }}>{stats.pendingOrders}</p>
+              </div>
+              <div className="p-3 rounded-full" style={{ backgroundColor: 'var(--warning-100)' }}>
+                <Clock size={20} style={{ color: 'var(--warning-600)' }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>Delivered</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--success-600)' }}>{stats.deliveredOrders}</p>
+              </div>
+              <div className="p-3 rounded-full" style={{ backgroundColor: 'var(--success-100)' }}>
+                <CheckCircle size={20} style={{ color: 'var(--success-600)' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="p-6 mb-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
+          <div className="flex items-center gap-2 mb-6">
+            <Filter size={18} style={{ color: 'var(--primary-600)' }} />
+            <h3 className="font-medium" style={{ color: 'var(--primary-700)' }}>Filters</h3>
+          </div>
+          
+          <div className="flex flex-col gap-6 md:flex-row">
+            <div className="flex-1">
+              <h4 className="mb-3 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
+                Order Status
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {orderFilters.map((filter) => {
+                  const Icon = filter.icon;
+                  return (
+                    <button 
+                      key={filter.value}
+                      onClick={() => setActiveStatusFilter(filter.value)}
+                      className={`flex items-center gap-2 px-4 py-2.5 transition-all duration-300 border rounded-lg hover:shadow-sm active:scale-95 ${
+                        activeStatusFilter === filter.value ? 'scale-105' : ''
+                      }`}
+                      style={{ 
+                        borderColor: activeStatusFilter === filter.value ? filter.color || 'var(--accent-400)' : 'var(--primary-200)',
+                        backgroundColor: activeStatusFilter === filter.value ? 
+                          (filter.color ? `${filter.color}15` : 'var(--accent-50)') : 'transparent',
+                        color: activeStatusFilter === filter.value ? 
+                          (filter.color || 'var(--accent-700)') : 'var(--primary-700)'
+                      }}
+                    >
+                      <Icon size={16} />
+                      {filter.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="mb-3 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
+                Time Period
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {timeFilters.map((filter) => (
+                  <button 
+                    key={filter.value}
+                    onClick={() => setActiveTimeFilter(filter.value)}
+                    className={`flex items-center gap-2 px-4 py-2.5 transition-all duration-300 border rounded-lg hover:shadow-sm active:scale-95 ${
+                      activeTimeFilter === filter.value ? 'scale-105' : ''
+                    }`}
+                    style={{ 
+                      borderColor: activeTimeFilter === filter.value ? 'var(--accent-400)' : 'var(--primary-200)',
+                      backgroundColor: activeTimeFilter === filter.value ? 'var(--accent-50)' : 'transparent',
+                      color: activeTimeFilter === filter.value ? 'var(--accent-700)' : 'var(--primary-700)'
+                    }}
+                  >
+                    {filter.value === 'LAST_30_DAYS' && <Calendar size={16} />}
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Orders List */}
+        {error ? (
+          <div className="p-8 text-center bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
+            <div className="mb-4 text-6xl">😔</div>
+            <h3 className="mb-2 text-xl font-bold" style={{ color: 'var(--primary-800)' }}>
+              Unable to Load Orders
+            </h3>
+            <p className="mb-6" style={{ color: 'var(--primary-600)' }}>{error}</p>
+            <button 
+              onClick={fetchOrders}
+              className="px-6 py-2.5 font-medium transition-all duration-200 rounded-lg hover:shadow-sm"
+              style={{ 
+                backgroundColor: 'var(--accent-500)',
+                color: 'white'
+              }}
+            >
+              Try Again
+            </button>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="p-8 text-center bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
+            <div className="mb-4 text-6xl">📦</div>
+            <h3 className="mb-2 text-xl font-bold" style={{ color: 'var(--primary-800)' }}>
+              No Orders Yet
+            </h3>
+            <p className="mb-6" style={{ color: 'var(--primary-600)' }}>
+              {activeStatusFilter !== 'ALL' 
+                ? `No ${orderFilters.find(f => f.value === activeStatusFilter)?.label.toLowerCase()} orders found.`
+                : "Start shopping to see your orders here!"}
+            </p>
+            <button 
+              onClick={() => router.push("/")}
+              className="px-6 py-2.5 font-medium transition-all duration-200 rounded-lg hover:shadow-sm"
+              style={{ 
+                backgroundColor: 'var(--accent-500)',
+                color: 'white'
+              }}
+            >
+              Start Shopping
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {orders.map((order) => {
+              const StatusIcon = getStatusIcon(order.status);
+              const statusColor = getStatusColor(order.status);
+              const totalItems = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+              
+              return (
+                <div key={order.id} className="overflow-hidden bg-white border shadow-sm rounded-2xl" 
+                     style={{ borderColor: 'var(--primary-100)' }}>
+                  
+                  {/* Order Header */}
+                  <div className="p-6">
+                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-full" style={{ backgroundColor: `${statusColor}15` }}>
+                          <StatusIcon size={20} style={{ color: statusColor }} />
                         </div>
-                        
                         <div>
-                            <h3 className="mb-3 font-medium" style={{ color: 'var(--primary-700)' }}>
-                                Time Period
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {timeFilters.map((filter) => (
-                                    <button key={filter} 
-                                            className="px-4 py-2 transition-all duration-300 border rounded-lg"
-                                            style={{ 
-                                                borderColor: filter === "Last 30 days" ? 'var(--accent-400)' : 'var(--primary-200)',
-                                                backgroundColor: filter === "Last 30 days" ? 'var(--accent-50)' : 'transparent',
-                                                color: filter === "Last 30 days" ? 'var(--accent-700)' : 'var(--primary-700)'
-                                            }}>
-                                        {filter}
-                                    </button>
-                                ))}
-                            </div>
+                          <h4 className="font-bold" style={{ color: 'var(--primary-900)' }}>
+                            Order #{order.id.slice(-8).toUpperCase()}
+                          </h4>
+                          <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
+                            Placed on {formatDate(order.createdAt)}
+                          </p>
                         </div>
-                    </div>
-                </div>
-
-                {/* Orders Table */}
-                <div className="overflow-hidden bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="text-left" style={{ backgroundColor: 'var(--primary-50)' }}>
-                                    <th className="p-4 font-medium" style={{ color: 'var(--primary-600)' }}>Order ID</th>
-                                    <th className="p-4 font-medium" style={{ color: 'var(--primary-600)' }}>Date</th>
-                                    <th className="p-4 font-medium" style={{ color: 'var(--primary-600)' }}>Items</th>
-                                    <th className="p-4 font-medium" style={{ color: 'var(--primary-600)' }}>Total</th>
-                                    <th className="p-4 font-medium" style={{ color: 'var(--primary-600)' }}>Status</th>
-                                    <th className="p-4 font-medium" style={{ color: 'var(--primary-600)' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {orders.map((order) => (
-                                    <tr key={order.id} className="transition-colors border-b hover:bg-gray-50" 
-                                        style={{ borderColor: 'var(--primary-100)' }}>
-                                        <td className="p-4">
-                                            <span className="font-bold" style={{ color: 'var(--primary-900)' }}>
-                                                {order.id}
-                                            </span>
-                                        </td>
-                                        <td className="p-4" style={{ color: 'var(--primary-700)' }}>
-                                            {order.date}
-                                        </td>
-                                        <td className="p-4" style={{ color: 'var(--primary-700)' }}>
-                                            {order.items} item{order.items > 1 ? 's' : ''}
-                                        </td>
-                                        <td className="p-4">
-                                            <span className="font-bold" style={{ color: 'var(--primary-900)' }}>
-                                                ${order.total.toFixed(2)}
-                                            </span>
-                                        </td>
-                                        <td className="p-4">
-                                            <span className="px-3 py-1.5 rounded-full text-sm font-medium"
-                                                  style={{ 
-                                                    backgroundColor: `${order.statusColor}20`,
-                                                    color: order.statusColor
-                                                  }}>
-                                                {order.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex gap-2">
-                                                <button className="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors"
-                                                        style={{ 
-                                                            borderColor: 'var(--primary-200)',
-                                                            color: 'var(--primary-700)'
-                                                        }}>
-                                                    View
-                                                </button>
-                                                {order.status === "Delivered" && (
-                                                    <button className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                                                            style={{ 
-                                                                backgroundColor: 'var(--accent-50)',
-                                                                color: 'var(--accent-700)'
-                                                            }}>
-                                                        Review
-                                                    </button>
-                                                )}
-                                                {order.tracking && (
-                                                    <button className="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors"
-                                                            style={{ 
-                                                                borderColor: 'var(--primary-200)',
-                                                                color: 'var(--primary-700)'
-                                                            }}>
-                                                        Track
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* Order Details Modal */}
-                <div className="grid grid-cols-1 gap-8 mt-8 lg:grid-cols-3">
-                    {/* Order Tracking */}
-                    <div className="lg:col-span-2">
-                        <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-                            <h2 className="mb-6 text-xl font-bold" style={{ color: 'var(--primary-900)' }}>
-                                Order Tracking: ORD-7840
-                            </h2>
-                            
-                            <div className="space-y-8">
-                                {/* Timeline */}
-                                <div className="relative">
-                                    {[
-                                        { status: "Order Placed", date: "Dec 10, 2024", time: "10:30 AM", completed: true },
-                                        { status: "Processing", date: "Dec 10, 2024", time: "2:15 PM", completed: true },
-                                        { status: "Shipped", date: "Dec 12, 2024", time: "9:45 AM", completed: false },
-                                        { status: "Out for Delivery", date: "Est. Dec 15, 2024", time: "", completed: false },
-                                        { status: "Delivered", date: "Est. Dec 15, 2024", time: "", completed: false }
-                                    ].map((step, index, array) => (
-                                        <div key={index} className="flex items-start mb-8 last:mb-0">
-                                            <div className="relative z-10 flex items-center justify-center flex-shrink-0 w-8 h-8 mr-4 rounded-full"
-                                                 style={{ 
-                                                    backgroundColor: step.completed ? 'var(--success-500)' : 'var(--primary-200)',
-                                                    color: step.completed ? 'white' : 'var(--primary-600)'
-                                                 }}>
-                                                {step.completed ? '✓' : (index + 1)}
-                                            </div>
-                                            <div className="flex-1">
-                                                <h4 className="mb-1 font-medium" style={{ color: 'var(--primary-800)' }}>
-                                                    {step.status}
-                                                </h4>
-                                                <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
-                                                    {step.date} {step.time && `• ${step.time}`}
-                                                </p>
-                                            </div>
-                                            {index < array.length - 1 && (
-                                                <div className="absolute left-4 top-8 bottom-0 w-0.5 z-0" 
-                                                     style={{ 
-                                                        backgroundColor: step.completed ? 'var(--success-300)' : 'var(--primary-200)',
-                                                        height: 'calc(100% - 2rem)'
-                                                     }}></div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                
-                                {/* Tracking Info */}
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                                        <div>
-                                            <h4 className="mb-1 font-medium" style={{ color: 'var(--primary-800)' }}>
-                                                Tracking Number: TRK-78401234
-                                            </h4>
-                                            <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
-                                                Carrier: Express Shipping
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button className="px-4 py-2 text-sm font-medium transition-colors border rounded-lg"
-                                                    style={{ 
-                                                        borderColor: 'var(--primary-200)',
-                                                        color: 'var(--primary-700)'
-                                                    }}>
-                                                Copy Tracking
-                                            </button>
-                                            <button className="px-4 py-2 text-sm font-medium transition-colors rounded-lg"
-                                                    style={{ 
-                                                        backgroundColor: 'var(--accent-500)',
-                                                        color: 'white'
-                                                    }}>
-                                                Track Package
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="px-3 py-1.5 rounded-full text-sm font-medium"
+                              style={{ 
+                                backgroundColor: `${statusColor}15`,
+                                color: statusColor
+                              }}>
+                          {order.status}
+                        </span>
+                        <span className="text-lg font-bold" style={{ color: 'var(--primary-900)' }}>
+                          {formatPrice(order.totalAmount)}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Order Summary */}
-                    <div>
-                        <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-                            <h2 className="mb-6 text-xl font-bold" style={{ color: 'var(--primary-900)' }}>
-                                Order Summary
-                            </h2>
-                            
-                            <div className="mb-6 space-y-4">
-                                <div className="flex justify-between">
-                                    <span style={{ color: 'var(--primary-600)' }}>Subtotal</span>
-                                    <span style={{ color: 'var(--primary-800)' }}>$189.50</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span style={{ color: 'var(--primary-600)' }}>Shipping</span>
-                                    <span style={{ color: 'var(--primary-800)' }}>$9.99</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span style={{ color: 'var(--primary-600)' }}>Tax</span>
-                                    <span style={{ color: 'var(--primary-800)' }}>$15.16</span>
-                                </div>
-                                <div className="pt-4 border-t">
-                                    <div className="flex justify-between text-lg font-bold">
-                                        <span style={{ color: 'var(--primary-900)' }}>Total</span>
-                                        <span style={{ color: 'var(--primary-900)' }}>$214.65</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                                <h4 className="font-medium" style={{ color: 'var(--primary-800)' }}>
-                                    Shipping Address
-                                </h4>
-                                <div className="text-sm" style={{ color: 'var(--primary-600)' }}>
-                                    <p>John Doe</p>
-                                    <p>123 Main Street</p>
-                                    <p>New York, NY 10001</p>
-                                    <p>(123) 456-7890</p>
-                                </div>
-                                
-                                <h4 className="mt-4 font-medium" style={{ color: 'var(--primary-800)' }}>
-                                    Payment Method
-                                </h4>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded">
-                                        <span className="text-blue-600">💳</span>
-                                    </div>
-                                    <span style={{ color: 'var(--primary-600)' }}>Visa ending in 4321</span>
-                                </div>
-                            </div>
-                            
-                            <div className="pt-6 mt-6 border-t" style={{ borderColor: 'var(--primary-100)' }}>
-                                <button className="w-full py-3 font-bold transition-all duration-300 border rounded-lg hover:shadow-md"
-                                        style={{ 
-                                            borderColor: 'var(--error-200)',
-                                            color: 'var(--error-600)'
-                                        }}>
-                                    Cancel Order
-                                </button>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 gap-4 mt-6 sm:grid-cols-3">
+                      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--primary-50)' }}>
+                        <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
+                          Items
+                        </p>
+                        <p className="font-bold" style={{ color: 'var(--primary-900)' }}>
+                          {totalItems} item{totalItems !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      
+                      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--primary-50)' }}>
+                        <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
+                          Delivery Address
+                        </p>
+                        <p className="font-medium truncate" style={{ color: 'var(--primary-900)' }}>
+                          {order.address?.city || 'N/A'}
+                        </p>
+                      </div>
+                      
+                      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--primary-50)' }}>
+                        <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
+                          Payment Method
+                        </p>
+                        <p className="font-medium" style={{ color: 'var(--primary-900)' }}>
+                          Cash on Delivery
+                        </p>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Expand/Collapse Button */}
+                  <button
+                    onClick={() => toggleOrderDetails(order.id)}
+                    className="flex items-center justify-center w-full py-3 border-t hover:bg-gray-50"
+                    style={{ borderColor: 'var(--primary-100)' }}
+                  >
+                    {expandedOrder === order.id ? (
+                      <ChevronDown size={20} style={{ color: 'var(--primary-600)' }} />
+                    ) : (
+                      <ChevronRight size={20} style={{ color: 'var(--primary-600)' }} />
+                    )}
+                  </button>
+
+                  {/* Expanded Details */}
+                  {expandedOrder === order.id && (
+                    <div className="p-6 border-t" style={{ borderColor: 'var(--primary-100)', backgroundColor: 'var(--primary-25)' }}>
+                      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                        {/* Order Items */}
+                        <div className="lg:col-span-2">
+                          <h5 className="mb-4 font-bold" style={{ color: 'var(--primary-800)' }}>
+                            Order Items
+                          </h5>
+                          <div className="space-y-4">
+                            {order.items?.map((item, index) => (
+                              <div key={index} className="flex items-start gap-4 p-4 bg-white border rounded-xl" 
+                                   style={{ borderColor: 'var(--primary-100)' }}>
+                                <img 
+                                  src={item.product?.images?.[0]} 
+                                  alt={item.product?.name}
+                                  className="object-cover w-20 h-20 rounded-lg"
+                                />
+                                <div className="flex-1">
+                                  <h6 className="font-medium" style={{ color: 'var(--primary-900)' }}>
+                                    {item.product?.name}
+                                  </h6>
+                                  <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                                    <span style={{ color: 'var(--primary-600)' }}>
+                                      Qty: {item.quantity}
+                                    </span>
+                                    <span style={{ color: 'var(--primary-600)' }}>
+                                      Size: {item.size}
+                                    </span>
+                                    <span style={{ color: 'var(--primary-600)' }}>
+                                      Color: {item.color}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-3">
+                                    <span className="font-bold" style={{ color: 'var(--primary-900)' }}>
+                                      {formatPrice(item.price * item.quantity)}
+                                    </span>
+                                    {order.status === 'DELIVERED' && (
+                                      <button className="flex items-center gap-1 px-3 py-1 text-sm font-medium transition-colors rounded-lg hover:shadow-sm"
+                                              style={{ 
+                                                backgroundColor: 'var(--accent-50)',
+                                                color: 'var(--accent-700)'
+                                              }}>
+                                        <Star size={14} />
+                                        Review
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Order Timeline */}
+                          <div className="mt-8">
+                            <h5 className="mb-4 font-bold" style={{ color: 'var(--primary-800)' }}>
+                              Order Timeline
+                            </h5>
+                            <div className="relative">
+                              {[
+                                { status: 'PENDING', label: 'Order Placed' },
+                                { status: 'PROCESSING', label: 'Processing' },
+                                { status: 'SHIPPED', label: 'Shipped' },
+                                { status: 'DELIVERED', label: 'Delivered' },
+                              ].map((step, index, array) => {
+                                const isCompleted = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
+                                  .indexOf(order.status) >= ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
+                                  .indexOf(step.status);
+                                
+                                return (
+                                  <div key={step.status} className="flex items-start mb-6 last:mb-0">
+                                    <div className="relative z-10 flex items-center justify-center flex-shrink-0 w-8 h-8 mr-4 rounded-full"
+                                         style={{ 
+                                            backgroundColor: isCompleted ? getStatusColor(step.status) : 'var(--primary-200)',
+                                            color: isCompleted ? 'white' : 'var(--primary-600)'
+                                         }}>
+                                      {isCompleted ? '✓' : (index + 1)}
+                                    </div>
+                                    <div>
+                                      <h6 className="font-medium" style={{ color: 'var(--primary-800)' }}>
+                                        {step.label}
+                                      </h6>
+                                      <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
+                                        {isCompleted ? 'Completed' : 'Pending'}
+                                      </p>
+                                    </div>
+                                    {index < array.length - 1 && (
+                                      <div className="absolute left-4 top-8 bottom-0 w-0.5 z-0" 
+                                           style={{ 
+                                              backgroundColor: isCompleted ? getStatusColor(step.status) : 'var(--primary-200)',
+                                              height: 'calc(100% - 2rem)'
+                                           }}></div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Order Details Sidebar */}
+                        <div>
+                          <h5 className="mb-4 font-bold" style={{ color: 'var(--primary-800)' }}>
+                            Order Details
+                          </h5>
+                          <div className="p-4 bg-white border rounded-xl" style={{ borderColor: 'var(--primary-100)' }}>
+                            
+                            {/* Customer Note */}
+                            {order.customerNote && (
+                              <div className="mb-6">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <MessageSquare size={16} style={{ color: 'var(--primary-600)' }} />
+                                  <span className="text-sm font-medium" style={{ color: 'var(--primary-700)' }}>
+                                    Your Note
+                                  </span>
+                                </div>
+                                <p className="p-3 text-sm rounded-lg" style={{ 
+                                  backgroundColor: 'var(--primary-50)',
+                                  color: 'var(--primary-700)'
+                                }}>
+                                  "{order.customerNote}"
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Shipping Address */}
+                            <div className="mb-6">
+                              <div className="flex items-center gap-2 mb-2">
+                                <MapPin size={16} style={{ color: 'var(--primary-600)' }} />
+                                <span className="text-sm font-medium" style={{ color: 'var(--primary-700)' }}>
+                                  Shipping Address
+                                </span>
+                              </div>
+                              {order.address ? (
+                                <div className="text-sm" style={{ color: 'var(--primary-600)' }}>
+                                  <p>{order.address.firstName} {order.address.lastName}</p>
+                                  <p>{order.address.street}</p>
+                                  <p>{order.address.city}, {order.address.state} {order.address.zipCode}</p>
+                                  <p>{order.address.country}</p>
+                                  <p className="mt-1">{order.address.phone}</p>
+                                </div>
+                              ) : (
+                                <p className="text-sm" style={{ color: 'var(--primary-500)' }}>No address provided</p>
+                              )}
+                            </div>
+
+                            {/* Order Summary */}
+                            <div className="mb-6">
+                              <div className="space-y-3">
+                                <div className="flex justify-between">
+                                  <span style={{ color: 'var(--primary-600)' }}>Subtotal</span>
+                                  <span style={{ color: 'var(--primary-800)' }}>
+                                    {formatPrice(order.totalAmount)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span style={{ color: 'var(--primary-600)' }}>Shipping</span>
+                                  <span style={{ color: 'var(--primary-800)' }}>Free</span>
+                                </div>
+                                <div className="pt-3 border-t">
+                                  <div className="flex justify-between font-bold">
+                                    <span style={{ color: 'var(--primary-900)' }}>Total</span>
+                                    <span style={{ color: 'var(--primary-900)' }}>
+                                      {formatPrice(order.totalAmount)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="space-y-3">
+                              <button 
+                                onClick={() => router.push(`/orders/${order.id}`)}
+                                className="flex items-center justify-center w-full gap-2 py-2.5 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95"
+                                style={{ 
+                                  borderColor: 'var(--primary-200)',
+                                  color: 'var(--primary-700)'
+                                }}
+                              >
+                                <Eye size={16} />
+                                View Full Details
+                              </button>
+                              
+                              {order.status === 'PENDING' && (
+                                <button 
+                                  onClick={() => handleCancelOrder(order.id)}
+                                  className="flex items-center justify-center w-full gap-2 py-2.5 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95"
+                                  style={{ 
+                                    borderColor: 'var(--error-200)',
+                                    color: 'var(--error-600)'
+                                  }}
+                                >
+                                  <XCircle size={16} />
+                                  Cancel Order
+                                </button>
+                              )}
+                              
+                              {order.status === 'DELIVERED' && (
+                                <button className="flex items-center justify-center w-full gap-2 py-2.5 font-medium transition-all duration-200 rounded-lg hover:shadow-sm active:scale-95"
+                                        style={{ 
+                                          backgroundColor: 'var(--accent-500)',
+                                          color: 'white'
+                                        }}>
+                                  <Star size={16} />
+                                  Write a Review
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-            </div>
-        </div>
-    )
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

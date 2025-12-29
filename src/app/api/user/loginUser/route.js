@@ -37,7 +37,7 @@ export async function POST(req) {
         const expires = new Date();
         
         // FIXED: getDate() instead of getData()
-        expires.setDate(expires.getDate() + (data.rememberMe ? 30 : 1));
+        expires.setDate(expires.getDate() + (data.rememberMe ? 30 : 5));
 
         // Create session in database
         const session = await prisma.session.create({
