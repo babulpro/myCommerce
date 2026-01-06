@@ -66,7 +66,7 @@ export default function OrdersPage() {
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'BDT',
       minimumFractionDigits: 2,
     }).format(price);
   };
@@ -92,6 +92,16 @@ export default function OrdersPage() {
       default: return Package;
     }
   };
+  
+      // Cancel an order
+    const cancelOrder = async (orderId, reason) => {
+      const response = await fetch(`/api/product/order/cancelOrder?orderId=${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancellationReason: reason })
+      });
+      return await response.json();
+    };
 
   const fetchOrders = async () => {
     try {
@@ -168,7 +178,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-6" style={{ backgroundColor: 'var(--primary-25)' }}>
+    <div className="min-h-screen p-6 mb-10 " style={{ backgroundColor: 'var(--primary-25)' }}>
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
@@ -246,10 +256,10 @@ export default function OrdersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>Delivered</p>
-                <p className="text-2xl font-bold" style={{ color: 'var(--success-600)' }}>{stats.deliveredOrders}</p>
+                <p className="text-2xl font-bold text-slate-800">{stats.deliveredOrders}</p>
               </div>
-              <div className="p-3 rounded-full" style={{ backgroundColor: 'var(--success-100)' }}>
-                <CheckCircle size={20} style={{ color: 'var(--success-600)' }} />
+              <div className="p-3 text-blue-600 bg-blue-200 rounded-full">
+                <CheckCircle size={20} />
               </div>
             </div>
           </div>
@@ -500,51 +510,109 @@ export default function OrdersPage() {
                             ))}
                           </div>
 
-                          {/* Order Timeline */}
-                          <div className="mt-8">
-                            <h5 className="mb-4 font-bold" style={{ color: 'var(--primary-800)' }}>
-                              Order Timeline
-                            </h5>
-                            <div className="relative">
-                              {[
-                                { status: 'PENDING', label: 'Order Placed' },
-                                { status: 'PROCESSING', label: 'Processing' },
-                                { status: 'SHIPPED', label: 'Shipped' },
-                                { status: 'DELIVERED', label: 'Delivered' },
-                              ].map((step, index, array) => {
-                                const isCompleted = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
-                                  .indexOf(order.status) >= ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
-                                  .indexOf(step.status);
-                                
-                                return (
-                                  <div key={step.status} className="flex items-start mb-6 last:mb-0">
-                                    <div className="relative z-10 flex items-center justify-center flex-shrink-0 w-8 h-8 mr-4 rounded-full"
-                                         style={{ 
-                                            backgroundColor: isCompleted ? getStatusColor(step.status) : 'var(--primary-200)',
-                                            color: isCompleted ? 'white' : 'var(--primary-600)'
-                                         }}>
-                                      {isCompleted ? '✓' : (index + 1)}
-                                    </div>
-                                    <div>
-                                      <h6 className="font-medium" style={{ color: 'var(--primary-800)' }}>
-                                        {step.label}
-                                      </h6>
-                                      <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
-                                        {isCompleted ? 'Completed' : 'Pending'}
-                                      </p>
-                                    </div>
-                                    {index < array.length - 1 && (
-                                      <div className="absolute left-4 top-8 bottom-0 w-0.5 z-0" 
-                                           style={{ 
-                                              backgroundColor: isCompleted ? getStatusColor(step.status) : 'var(--primary-200)',
-                                              height: 'calc(100% - 2rem)'
-                                           }}></div>
+                          
+                        {/* Order Timeline */}
+                        <div className="p-3 mt-8 bg-sky-200">
+                          <h5 className="mb-4 font-bold" style={{ color: 'var(--primary-800)' }}>
+                            Order Timeline
+                          </h5>
+                          <div className="relative">
+                            {[
+                              { status: 'PENDING', label: 'Order Placed', description: 'Your order has been placed' },
+                              { status: 'PROCESSING', label: 'Processing', description: 'We are preparing your order' },
+                              { status: 'SHIPPED', label: 'Shipped', description: 'Your order is on the way' },
+                              { status: 'DELIVERED', label: 'Delivered', description: 'Your order has been delivered' },
+                            ].map((step, index, array) => {
+                              // Get the index of the current step and order status
+                              const stepIndex = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'].indexOf(step.status);
+                              const orderStatusIndex = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'].indexOf(order.status);
+                              
+                              // Step is completed if order status has reached this step or beyond
+                              const isCompleted = orderStatusIndex >= stepIndex;
+                              
+                              // Step is current if order status exactly matches this step
+                              const isCurrent = order.status === step.status;
+                              
+                              // Step is pending if order status hasn't reached this step yet
+                              const isPending = orderStatusIndex < stepIndex;
+                              
+                              return (
+                                <div key={step.status} className="flex items-start mb-6 last:mb-0">
+                                  <div 
+                                    className="relative z-10 flex items-center justify-center flex-shrink-0 w-8 h-8 mr-4 rounded-full"
+                                    style={{ 
+                                      backgroundColor: isCurrent ? getStatusColor(step.status) : 
+                                                isCompleted ? getStatusColor(step.status) : 'var(--primary-200)',
+                                      color: isCompleted ? 'white' : 'var(--primary-600)',
+                                      border: isCurrent ? `2px solid white` : 'none',
+                                      boxShadow: isCurrent ? `0 0 0 2px ${getStatusColor(step.status)}` : 'none'
+                                    }}
+                                  >
+                                    {isCompleted ? (
+                                      isCurrent ? (
+                                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                                      ) : (
+                                        '✓'
+                                      )
+                                    ) : (
+                                      index + 1
                                     )}
                                   </div>
-                                );
-                              })}
-                            </div>
+                                  <div>
+                                    <h6 
+                                      className="font-medium" 
+                                      style={{ 
+                                        color: isCurrent ? getStatusColor(step.status) : 
+                                              isCompleted ? getStatusColor(step.status) : 'var(--primary-800)' 
+                                      }}
+                                    >
+                                      {step.label}
+                                    </h6>
+                                    <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
+                                      {isCurrent ? 'In Progress' : 
+                                      isCompleted ? 'Completed' : 'Pending'}
+                                    </p>
+                                    {isCurrent && (
+                                      <p className="mt-1 text-xs" style={{ color: 'var(--primary-500)' }}>
+                                        {step.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {index < array.length - 1 && (
+                                    <div 
+                                      className="absolute left-4 top-8 bottom-0 w-0.5 z-0" 
+                                      style={{ 
+                                        backgroundColor: isCompleted ? getStatusColor(step.status) : 'var(--primary-200)',
+                                        height: 'calc(100% - 2rem)'
+                                      }}
+                                    ></div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
+                          
+                          {/* Show estimated delivery for shipped orders */}
+                          {order.status === 'SHIPPED' && (
+                            <div className="p-4 mt-4 rounded-lg" style={{ 
+                              backgroundColor: 'var(--primary-50)',
+                              border: '1px solid var(--primary-200)'
+                            }}>
+                              <div className="flex items-center gap-3">
+                                <Truck size={16} style={{ color: 'var(--primary-600)' }} />
+                                <div>
+                                  <p className="text-sm font-medium" style={{ color: 'var(--primary-800)' }}>
+                                    Estimated Delivery
+                                  </p>
+                                  <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
+                                    Your order should arrive within 3-5 business days
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         </div>
 
                         {/* Order Details Sidebar */}
@@ -620,7 +688,7 @@ export default function OrdersPage() {
                             {/* Actions */}
                             <div className="space-y-3">
                               <button 
-                                onClick={() => router.push(`/orders/${order.id}`)}
+                                onClick={() => router.push(`/user/dashboard/orderDetails/${order.id}`)}
                                 className="flex items-center justify-center w-full gap-2 py-2.5 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95"
                                 style={{ 
                                   borderColor: 'var(--primary-200)',
@@ -633,12 +701,9 @@ export default function OrdersPage() {
                               
                               {order.status === 'PENDING' && (
                                 <button 
-                                  onClick={() => handleCancelOrder(order.id)}
-                                  className="flex items-center justify-center w-full gap-2 py-2.5 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95"
-                                  style={{ 
-                                    borderColor: 'var(--error-200)',
-                                    color: 'var(--error-600)'
-                                  }}
+                                  onClick={() => cancelOrder(order.id,"all")}
+                                  className="flex items-center justify-center w-full gap-2 py-2.5 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95 text-slate-800"
+                                   
                                 >
                                   <XCircle size={16} />
                                   Cancel Order

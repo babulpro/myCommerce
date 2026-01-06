@@ -1,7 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Trash2, Plus, Minus, Package, Truck, Shield, CreditCard, ArrowLeft, Loader2, Heart, Share2, ChevronRight } from "lucide-react";
+import { 
+    ShoppingCart, Trash2, Plus, Minus, Package, Truck, Shield, 
+    CreditCard, ArrowLeft, Loader2, Heart, Share2, ChevronRight, 
+    AlertCircle, CheckCircle, ShoppingBag, Rocket
+} from "lucide-react";
 
 export default function CartPage() {
     const router = useRouter();
@@ -10,6 +14,10 @@ export default function CartPage() {
     const [error, setError] = useState(null);
     const [updatingItems, setUpdatingItems] = useState({});
     const [removingItems, setRemovingItems] = useState({});
+    const [orderLoading, setOrderLoading] = useState(false);
+    const [orderMessage, setOrderMessage] = useState(null);
+    const [customerNote, setCustomerNote] = useState("");
+    const [showNoteModal, setShowNoteModal] = useState(false);
 
     // Fetch cart data
     const fetchCart = async () => {
@@ -136,6 +144,83 @@ export default function CartPage() {
         }
     };
 
+    // Order All Items from Cart
+    const handleOrderAll = async () => {
+        if (!cartData?.items?.length) {
+            setOrderMessage({ 
+                type: "error", 
+                text: "Your cart is empty" 
+            });
+            return;
+        }
+
+        setOrderLoading(true);
+        setOrderMessage(null);
+
+        try {
+            const response = await fetch('/api/product/order/newOrder', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    customerNote: customerNote.trim() || undefined
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === "success") {
+                setOrderMessage({ 
+                    type: "success", 
+                    text: "Order placed successfully!" 
+                });
+                
+                // Clear cart from state
+                setCartData(prev => ({
+                    ...prev,
+                    items: []
+                }));
+                
+                // Hide note modal
+                setShowNoteModal(false);
+                setCustomerNote("");
+                
+                // Redirect to orders page after 2 seconds
+                setTimeout(() => {
+                    router.push("/orders");
+                }, 2000);
+            } else {
+                setOrderMessage({ 
+                    type: "error", 
+                    text: data.msg || "Failed to place order" 
+                });
+            }
+        } catch (err) {
+            setOrderMessage({ 
+                type: "error", 
+                text: "Network error. Please try again." 
+            });
+            console.error("Order error:", err);
+        } finally {
+            setOrderLoading(false);
+        }
+    };
+
+    // Check stock availability
+    const checkStockAvailability = () => {
+        if (!cartData?.items?.length) return { allAvailable: true, outOfStock: [] };
+        
+        const outOfStock = cartData.items.filter(item => 
+            item.product.inventory < item.quantity
+        );
+        
+        return {
+            allAvailable: outOfStock.length === 0,
+            outOfStock
+        };
+    };
+
     // Calculate totals
     const calculateTotals = () => {
         if (!cartData?.items?.length) return { subtotal: 0, discount: 0, total: 0, totalItems: 0 };
@@ -177,6 +262,7 @@ export default function CartPage() {
     };
 
     const totals = calculateTotals();
+    const stockCheck = checkStockAvailability();
 
     if (loading) {
         return (
@@ -256,6 +342,74 @@ export default function CartPage() {
         <div className="min-h-screen" style={{
             background: "linear-gradient(to bottom, var(--primary-25), white)"
         }}>
+            {/* Order Message */}
+            {orderMessage && (
+                <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 p-4 rounded-lg shadow-lg max-w-md w-full ${
+                    orderMessage.type === 'success' 
+                        ? 'bg-green-50 border border-green-200 text-green-800' 
+                        : 'bg-red-50 border border-red-200 text-red-800'
+                }`}>
+                    <div className="flex items-center gap-3">
+                        {orderMessage.type === 'success' ? (
+                            <CheckCircle className="flex-shrink-0 text-green-600" size={20} />
+                        ) : (
+                            <AlertCircle className="flex-shrink-0 text-red-600" size={20} />
+                        )}
+                        <p>{orderMessage.text}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Customer Note Modal */}
+            {showNoteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+                    <div className="w-full max-w-md p-6 bg-white rounded-xl">
+                        <h3 className="mb-4 text-xl font-bold" style={{ color: "var(--primary-900)" }}>
+                            Add Order Note
+                        </h3>
+                        <p className="mb-4 text-sm" style={{ color: "var(--primary-600)" }}>
+                            Add special instructions for your order (optional)
+                        </p>
+                        <textarea
+                            value={customerNote}
+                            onChange={(e) => setCustomerNote(e.target.value)}
+                            placeholder="e.g., Please deliver after 5 PM, special packaging, etc."
+                            className="w-full p-3 mb-4 border rounded-lg resize-none"
+                            style={{
+                                borderColor: "var(--primary-200)",
+                                minHeight: "100px"
+                            }}
+                        />
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowNoteModal(false);
+                                    setCustomerNote("");
+                                }}
+                                className="flex-1 py-2 font-medium transition-colors border rounded-lg hover:bg-primary-50"
+                                style={{
+                                    color: "var(--primary-700)",
+                                    borderColor: "var(--primary-300)"
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleOrderAll}
+                                disabled={orderLoading}
+                                className="flex-1 py-2 font-medium text-white transition-all rounded-lg"
+                                style={{
+                                    background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
+                                    opacity: orderLoading ? 0.7 : 1
+                                }}
+                            >
+                                {orderLoading ? "Processing..." : "Place Order"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="py-6" style={{ backgroundColor: "var(--primary-50)" }}>
                 <div className="px-4 mx-auto sm:container">
@@ -281,6 +435,33 @@ export default function CartPage() {
             </div>
 
             <div className="px-4 py-6 mx-auto sm:py-8 sm:container">
+                {/* Out of Stock Warning */}
+                {!stockCheck.allAvailable && (
+                    <div className="p-4 mb-6 rounded-xl" style={{
+                        backgroundColor: "var(--warning-50)",
+                        border: "1px solid var(--warning-200)"
+                    }}>
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="flex-shrink-0 mt-0.5" style={{ color: "var(--warning-600)" }} />
+                            <div>
+                                <h3 className="font-bold" style={{ color: "var(--warning-800)" }}>
+                                    Insufficient Stock
+                                </h3>
+                                <p className="mt-1 text-sm" style={{ color: "var(--warning-700)" }}>
+                                    Some items don't have enough stock. Please adjust quantities:
+                                </p>
+                                <ul className="mt-2 space-y-1 text-sm" style={{ color: "var(--warning-600)" }}>
+                                    {stockCheck.outOfStock.map(item => (
+                                        <li key={item.id}>
+                                            • {item.product.name}: Available {item.product.inventory}, Requested {item.quantity}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-8 lg:grid lg:grid-cols-3 lg:gap-8">
                     {/* Cart Items - 2/3 width */}
                     <div className="lg:col-span-2">
@@ -301,12 +482,58 @@ export default function CartPage() {
                             </div>
                         </div>
 
+                        {/* Quick Order Button */}
+                        <div className="p-4 mb-6 rounded-xl" style={{
+                            backgroundColor: "white",
+                            border: "2px solid var(--accent-200)",
+                            boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.1)"
+                        }}>
+                            <div className="flex flex-col items-center gap-4 md:flex-row">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-center w-12 h-12 rounded-full" style={{
+                                        backgroundColor: "var(--accent-100)"
+                                    }}>
+                                        <Rocket style={{ color: "var(--accent-600)" }} size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold" style={{ color: "var(--primary-900)" }}>
+                                            Order All Items at Once
+                                        </h3>
+                                        <p className="text-sm" style={{ color: "var(--primary-600)" }}>
+                                            Skip checkout and order directly
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowNoteModal(true)}
+                                    disabled={orderLoading || !stockCheck.allAvailable}
+                                    className="flex items-center gap-2 px-6 py-3 font-bold text-white transition-all duration-300 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{
+                                        background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
+                                    }}
+                                >
+                                    {orderLoading ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-white rounded-full animate-spin border-t-transparent"></div>
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ShoppingBag size={20} />
+                                            Order All Items
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="space-y-4">
                             {cartData.items.map((item) => {
                                 const itemPrice = item.product.price;
                                 const itemDiscount = item.product.discountPercent || 0;
                                 const discountedPrice = itemPrice - (itemPrice * itemDiscount / 100);
                                 const itemTotal = discountedPrice * item.quantity;
+                                const isOutOfStock = item.product.inventory < item.quantity;
                                 
                                 return (
                                     <div 
@@ -314,9 +541,23 @@ export default function CartPage() {
                                         className="p-4 transition-all duration-200 border-2 rounded-xl hover:shadow-lg"
                                         style={{
                                             backgroundColor: "white",
-                                            borderColor: "var(--primary-200)"
+                                            borderColor: isOutOfStock ? "var(--warning-200)" : "var(--primary-200)"
                                         }}
                                     >
+                                        {isOutOfStock && (
+                                            <div className="p-2 mb-3 text-sm rounded-lg" style={{
+                                                backgroundColor: "var(--warning-50)",
+                                                color: "var(--warning-700)"
+                                            }}>
+                                                <div className="flex items-center gap-2">
+                                                    <AlertCircle size={16} />
+                                                    <span>
+                                                        Only {item.product.inventory} available, but you ordered {item.quantity}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
                                         <div className="flex flex-col gap-4 sm:flex-row">
                                             {/* Product Image */}
                                             <div className="flex-shrink-0">
@@ -451,7 +692,7 @@ export default function CartPage() {
                                                             </div>
                                                             
                                                             {/* Stock info */}
-                                                            <div className="text-sm" style={{ color: "var(--primary-600)" }}>
+                                                            <div className={`text-sm ${isOutOfStock ? 'text-warning-600' : 'text-primary-600'}`}>
                                                                 {item.product.inventory > 0 
                                                                     ? `${item.product.inventory} in stock`
                                                                     : "Out of stock"}
@@ -555,20 +796,64 @@ export default function CartPage() {
                                     </div>
                                 </div>
 
-                                {/* Checkout Button */}
+                                {/* Order All Button */}
                                 <button
-                                    onClick={() => router.push("/checkout")}
-                                    className="w-full py-4 mb-4 font-bold text-white transition-all duration-300 rounded-xl hover:shadow-xl"
+                                    onClick={() => setShowNoteModal(true)}
+                                    disabled={orderLoading || !stockCheck.allAvailable}
+                                    className="w-full py-3 mb-3 font-bold text-white transition-all duration-300 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                     style={{
-                                        background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
-                                        boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"
+                                        background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
                                     }}
                                 >
-                                    <div className="flex items-center justify-center gap-3">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <ShoppingBag size={20} />
+                                        Order All Items
+                                    </div>
+                                </button>
+
+                                {/* OR separator */}
+                                <div className="relative mb-4">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t" style={{ borderColor: "var(--primary-200)" }}></div>
+                                    </div>
+                                    <div className="relative flex justify-center text-sm">
+                                        <span className="px-2 bg-white" style={{ color: "var(--primary-500)" }}>
+                                            OR
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Regular Checkout Button */}
+                                <button
+                                    onClick={() => router.push("/checkout")}
+                                    className="w-full py-3 mb-4 font-bold text-white transition-all duration-300 rounded-lg hover:shadow-lg"
+                                    style={{
+                                        background: "linear-gradient(to right, var(--primary-500), var(--primary-600))"
+                                    }}
+                                >
+                                    <div className="flex items-center justify-center gap-2">
                                         <CreditCard size={20} />
                                         Proceed to Checkout
                                     </div>
                                 </button>
+
+                                {/* Quick Order Info */}
+                                <div className="p-4 mb-4 rounded-lg" style={{
+                                    backgroundColor: "var(--accent-50)",
+                                    border: "1px solid var(--accent-200)"
+                                }}>
+                                    <div className="flex items-start gap-3">
+                                        <Rocket className="flex-shrink-0 mt-0.5" style={{ color: "var(--accent-600)" }} size={16} />
+                                        <div>
+                                            <h4 className="text-sm font-bold" style={{ color: "var(--accent-800)" }}>
+                                                Order All Items
+                                            </h4>
+                                            <p className="text-xs mt-0.5" style={{ color: "var(--accent-600)" }}>
+                                                Skip checkout. Use your default address. Fastest way to order.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {/* Trust Badges */}
                                 <div className="pt-6 mt-6 border-t" style={{ borderColor: "var(--primary-200)" }}>
@@ -601,7 +886,7 @@ export default function CartPage() {
                                 {/* Continue Shopping */}
                                 <button
                                     onClick={() => router.push("/")}
-                                    className="w-full py-3 mt-6 font-medium transition-colors border rounded-xl hover:bg-primary-50"
+                                    className="w-full py-3 mt-6 font-medium transition-colors border rounded-lg hover:bg-primary-50"
                                     style={{
                                         color: "var(--primary-700)",
                                         borderColor: "var(--primary-300)"

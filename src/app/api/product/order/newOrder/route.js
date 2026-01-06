@@ -271,12 +271,7 @@ export async function PUT(req) {
 
         // Verify user exists
         const user = await prisma.user.findUnique({
-            where: { id: userId },
-            include: {
-                addresses: {
-                    take: 1
-                }
-            }
+            where: { id: userId }
         });
 
         if (!user) {
@@ -287,15 +282,22 @@ export async function PUT(req) {
         }
 
         // Check if user has at least one address
-        if (!user.addresses || user.addresses.length === 0) {
+          // Find address
+        const findAddress = await prisma.address.findFirst({
+            where: { userId: userId }
+        });
+
+        // Check if user has at least one address
+        if (!findAddress) {
             return NextResponse.json({
                 status: "fail",
                 msg: "Please add a shipping address before placing an order"
             }, { status: 400 });
-        }
+        } 
 
-        const address = user.addresses[0];
-        const addressId = address.id;
+        // Use the first/default address 
+        const addressId =findAddress.id;
+
 
         // Get user's cart with items
         const cart = await prisma.cart.findUnique({
