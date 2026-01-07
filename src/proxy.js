@@ -64,38 +64,7 @@ export async function proxy(req) {
     }
   }
   
-  // Protect API routes
-  if (req.nextUrl.pathname.startsWith("/api/secret")) {
-    const token = req.cookies.get("token");
-    
-    if (!token) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    
-    try {
-      const payload = await DecodedJwtToken(token.value);
-      
-      // Set headers
-      const requestHeaders = new Headers(req.headers);
-      requestHeaders.set('user-id', payload.id);
-      requestHeaders.set('user-role', payload.role);
-      
-      return NextResponse.next({
-        request: { headers: requestHeaders }
-      });
-      
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Invalid token" },
-        { status: 401 }
-      );
-    }
-  }
-  
-  // Protect admin API routes
+  // Protect API routes - Fixed order to avoid conflicts
   if (req.nextUrl.pathname.startsWith("/api/admin")) {
     const token = req.cookies.get("token");
     
@@ -134,6 +103,42 @@ export async function proxy(req) {
     }
   }
   
+  // Other API protections
+  if (
+    req.nextUrl.pathname.startsWith("/api/secret") ||
+    req.nextUrl.pathname.startsWith("/api/orders") ||
+    req.nextUrl.pathname.startsWith("/api/wishlist") ||
+    req.nextUrl.pathname.startsWith("/api/cart")
+  ) {
+    const token = req.cookies.get("token");
+    
+    if (!token) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    
+    try {
+      const payload = await DecodedJwtToken(token.value);
+      
+      // Set headers
+      const requestHeaders = new Headers(req.headers);
+      requestHeaders.set('user-id', payload.id);
+      requestHeaders.set('user-role', payload.role);
+      
+      return NextResponse.next({
+        request: { headers: requestHeaders }
+      });
+      
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Invalid token" },
+        { status: 401 }
+      );
+    }
+  }
+  
   // Continue to next if no protection needed
   return NextResponse.next();
 }
@@ -148,4 +153,4 @@ export const config = {
     '/api/wishlist/:path*',
     '/api/cart/:path*',
   ],
-};
+}
