@@ -1,12 +1,12 @@
 import { jwtVerify, SignJWT } from "jose"
 
- export async function CreateJwtToken(email,id,days) {
+ export async function CreateJwtToken(email,id) {
     const Secret= new TextEncoder().encode("123-xyz")
     let token = await new SignJWT({email,id})
                 .setProtectedHeader({alg:'HS256'})
                 .setIssuedAt()
                 .setIssuer("babul1946@gmail.com")
-                .setExpirationTime(days)
+                .setExpirationTime("2h")
                 .sign(Secret);
 
     return token
