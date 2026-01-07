@@ -10,15 +10,18 @@ import {
   RefreshCw,
   Filter,
   Calendar,
-  Eye,
-  Star,
-  MapPin,
+  ShoppingBag,
   CreditCard,
+  MapPin,
+  MessageSquare,
   ChevronRight,
   ChevronDown,
-  Download,
-  Printer,
-  MessageSquare
+  User,
+  Phone,
+  Home,
+  DollarSign,
+  Tag,
+  Archive
 } from "lucide-react";
 
 export default function OrdersPage() {
@@ -26,40 +29,24 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [activeStatusFilter, setActiveStatusFilter] = useState("ALL");
-  const [activeTimeFilter, setActiveTimeFilter] = useState("LAST_30_DAYS");
-  const [stats, setStats] = useState({
-    totalOrders: 0,
-    totalSpent: 0,
-    pendingOrders: 0,
-    deliveredOrders: 0
-  });
 
   const orderFilters = [
-    { value: "ALL", label: "All Orders", icon: Package },
-    { value: "PENDING", label: "Pending", icon: Clock, color: "var(--warning-500)" },
-    { value: "PROCESSING", label: "Processing", icon: RefreshCw, color: "var(--info-500)" },
-    { value: "SHIPPED", label: "Shipped", icon: Truck, color: "var(--primary-500)" },
-    { value: "DELIVERED", label: "Delivered", icon: CheckCircle, color: "var(--success-500)" },
-    { value: "CANCELLED", label: "Cancelled", icon: XCircle, color: "var(--error-500)" },
-  ];
-
-  const timeFilters = [
-    { value: "LAST_30_DAYS", label: "Last 30 days" },
-    { value: "LAST_3_MONTHS", label: "Last 3 months" },
-    { value: "LAST_6_MONTHS", label: "Last 6 months" },
-    { value: "THIS_YEAR", label: "This Year" },
-    { value: "ALL_TIME", label: "All Time" },
+    { value: "ALL", label: "All Orders", bgColor: "bg-gray-100", textColor: "text-gray-700", borderColor: "border-gray-300" },
+    { value: "PENDING", label: "Pending", bgColor: "bg-amber-100", textColor: "text-amber-700", borderColor: "border-amber-300" },
+    { value: "PROCESSING", label: "Processing", bgColor: "bg-blue-100", textColor: "text-blue-700", borderColor: "border-blue-300" },
+    { value: "SHIPPED", label: "Shipped", bgColor: "bg-indigo-100", textColor: "text-indigo-700", borderColor: "border-indigo-300" },
+    { value: "DELIVERED", label: "Delivered", bgColor: "bg-emerald-100", textColor: "text-emerald-700", borderColor: "border-emerald-300" },
+    { value: "CANCELLED", label: "Cancelled", bgColor: "bg-rose-100", textColor: "text-rose-700", borderColor: "border-rose-300" },
   ];
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
-      year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 
@@ -69,17 +56,6 @@ export default function OrdersPage() {
       currency: 'BDT',
       minimumFractionDigits: 2,
     }).format(price);
-  };
-
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'PENDING': return 'var(--warning-500)';
-      case 'PROCESSING': return 'var(--info-500)';
-      case 'SHIPPED': return 'var(--primary-500)';
-      case 'DELIVERED': return 'var(--success-500)';
-      case 'CANCELLED': return 'var(--error-500)';
-      default: return 'var(--neutral-500)';
-    }
   };
 
   const getStatusIcon = (status) => {
@@ -92,26 +68,48 @@ export default function OrdersPage() {
       default: return Package;
     }
   };
-  
-      // Cancel an order
-    const cancelOrder = async (orderId, reason) => {
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'PENDING': return { bg: "bg-blue-500", text: "text-amber-700", border: "border-amber-300", icon: "text-amber-500" };
+      case 'PROCESSING': return { bg: "bg-green-400", text: "text-slate-900", border: "border-blue-300", icon: "text-blue-500" };
+      case 'SHIPPED': return { bg: "bg-yellow-500", text: "text-indigo-700", border: "border-indigo-300", icon: "text-indigo-500" };
+      case 'DELIVERED': return { bg: "bg-green-600", text: "text-emerald-700", border: "border-emerald-300", icon: "text-emerald-500" };
+      case 'CANCELLED': return { bg: "bg-rose-100", text: "text-rose-700", border: "border-rose-300", icon: "text-rose-500" };
+      default: return { bg: "bg-gray-100", text: "text-gray-700", border: "border-gray-300", icon: "text-gray-500" };
+    }
+  };
+
+  const cancelOrder = async (orderId, reason) => {
+    if (!confirm("Are you sure you want to cancel this order?")) return;
+    
+    try {
       const response = await fetch(`/api/product/order/cancelOrder?orderId=${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cancellationReason: reason })
       });
-      return await response.json();
-    };
+      const data = await response.json();
+      
+      if (data.status === "success") {
+        alert("Order cancelled successfully!");
+        fetchOrders();
+      } else {
+        alert(data.msg || "Failed to cancel order");
+      }
+    } catch (err) {
+      alert("An error occurred. Please try again.");
+    }
+  };
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/product/order/newOrder?status=${activeStatusFilter}&time=${activeTimeFilter}`);
+      const response = await fetch(`/api/product/order/newOrder?status=${activeStatusFilter}`);
       const data = await response.json();
       
       if (data.status === "success") {
         setOrders(data.orders);
-        calculateStats(data.orders);
       } else {
         setError("Failed to fetch orders");
       }
@@ -123,53 +121,71 @@ export default function OrdersPage() {
     }
   };
 
-  const calculateStats = (ordersList) => {
-    const stats = {
-      totalOrders: ordersList.length,
-      totalSpent: ordersList.reduce((sum, order) => sum + order.totalAmount, 0),
-      pendingOrders: ordersList.filter(order => order.status === 'PENDING').length,
-      deliveredOrders: ordersList.filter(order => order.status === 'DELIVERED').length,
-    };
-    setStats(stats);
-  };
-
-  const handleCancelOrder = async (orderId) => {
-    if (!confirm("Are you sure you want to cancel this order?")) return;
-    
-    try {
-      const response = await fetch(`/api/orders/${orderId}`, {
-        method: 'DELETE'
-      });
-      const data = await response.json();
-      
-      if (data.status === "success") {
-        alert("Order cancelled successfully!");
-        fetchOrders(); // Refresh orders
-      } else {
-        alert(data.msg || "Failed to cancel order");
-      }
-    } catch (err) {
-      alert("An error occurred. Please try again.");
-    }
-  };
-
   const toggleOrderDetails = (orderId) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
   };
 
+  const getTotalItems = (order) => {
+    return order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  };
+
+  // Calculate timeline steps based on order status
+  const getTimelineSteps = (orderStatus) => {
+    const steps = [
+      { 
+        status: 'ORDER_PLACED', 
+        label: 'Order Placed', 
+        description: 'Your order has been received',
+        defaultDate: 'Today'
+      },
+      { 
+        status: 'PROCESSING', 
+        label: 'Processing', 
+        description: 'Preparing your items for shipping',
+        defaultDate: 'Within 24 hours'
+      },
+      { 
+        status: 'SHIPPED', 
+        label: 'Shipped', 
+        description: 'Your order is on the way',
+        defaultDate: '2-3 business days'
+      },
+      { 
+        status: 'DELIVERED', 
+        label: 'Delivered', 
+        description: 'Package delivered successfully',
+        defaultDate: '5-7 business days'
+      }
+    ];
+
+    const statusOrder = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+    const currentStatusIndex = statusOrder.indexOf(orderStatus);
+
+    return steps.map((step, index) => {
+      const stepStatusIndex = statusOrder.indexOf(step.status === 'ORDER_PLACED' ? 'PENDING' : step.status);
+      const isCompleted = currentStatusIndex >= stepStatusIndex;
+      const isCurrent = currentStatusIndex === stepStatusIndex;
+      const isCancelled = orderStatus === 'CANCELLED';
+      
+      return {
+        ...step,
+        isCompleted: isCancelled ? false : isCompleted,
+        isCurrent: isCancelled ? false : isCurrent,
+        isCancelled
+      };
+    });
+  };
+
   useEffect(() => {
     fetchOrders();
-  }, [activeStatusFilter, activeTimeFilter]);
+  }, [activeStatusFilter]);
 
   if (loading && orders.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--primary-25)' }}>
+      <div className="flex items-center justify-center min-h-[60vh] bg-gray-50">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-6 border-4 rounded-full animate-spin" style={{
-            borderColor: "var(--primary-400)",
-            borderTopColor: "var(--accent-600)"
-          }}></div>
-          <p className="text-lg font-bold" style={{ color: "var(--primary-700)" }}>
+          <div className="w-12 h-12 mx-auto mb-4 border-gray-300 rounded-full border-3 border-t-blue-500 animate-spin"></div>
+          <p className="text-sm font-medium text-gray-600">
             Loading your orders...
           </p>
         </div>
@@ -178,197 +194,90 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="min-h-screen p-6 mb-10 " style={{ backgroundColor: 'var(--primary-25)' }}>
+    <div className="min-h-screen p-4 bg-gray-50 md:p-6">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="mb-2 text-3xl font-bold" style={{ color: 'var(--primary-900)' }}>
+              <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
                 My Orders
               </h1>
-              <p className="text-lg" style={{ color: 'var(--primary-600)' }}>
-                Track, manage, and review all your orders
+              <p className="mt-1 text-sm text-gray-600 md:text-base">
+                Track and manage all your purchases in one place
               </p>
             </div>
-            <div className="flex gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95"
-                      style={{ 
-                        borderColor: 'var(--primary-200)',
-                        color: 'var(--primary-700)'
-                      }}>
-                <Download size={16} />
-                Export
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95"
-                      style={{ 
-                        borderColor: 'var(--primary-200)',
-                        color: 'var(--primary-700)'
-                      }}>
-                <Printer size={16} />
-                Print
-              </button>
+            <div className="items-center hidden gap-2 text-sm text-gray-500 md:flex">
+              <Archive className="w-4 h-4" />
+              <span>{orders.length} orders</span>
             </div>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>Total Orders</p>
-                <p className="text-2xl font-bold" style={{ color: 'var(--primary-900)' }}>{stats.totalOrders}</p>
-              </div>
-              <div className="p-3 rounded-full" style={{ backgroundColor: 'var(--primary-100)' }}>
-                <Package size={20} style={{ color: 'var(--primary-600)' }} />
-              </div>
-            </div>
-          </div>
-
-          <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>Total Spent</p>
-                <p className="text-2xl font-bold" style={{ color: 'var(--primary-900)' }}>
-                  {formatPrice(stats.totalSpent)}
-                </p>
-              </div>
-              <div className="p-3 rounded-full" style={{ backgroundColor: 'var(--accent-100)' }}>
-                <CreditCard size={20} style={{ color: 'var(--accent-600)' }} />
-              </div>
-            </div>
-          </div>
-
-          <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>Pending</p>
-                <p className="text-2xl font-bold" style={{ color: 'var(--warning-600)' }}>{stats.pendingOrders}</p>
-              </div>
-              <div className="p-3 rounded-full" style={{ backgroundColor: 'var(--warning-100)' }}>
-                <Clock size={20} style={{ color: 'var(--warning-600)' }} />
-              </div>
-            </div>
-          </div>
-
-          <div className="p-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>Delivered</p>
-                <p className="text-2xl font-bold text-slate-800">{stats.deliveredOrders}</p>
-              </div>
-              <div className="p-3 text-blue-600 bg-blue-200 rounded-full">
-                <CheckCircle size={20} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="p-6 mb-6 bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-          <div className="flex items-center gap-2 mb-6">
-            <Filter size={18} style={{ color: 'var(--primary-600)' }} />
-            <h3 className="font-medium" style={{ color: 'var(--primary-700)' }}>Filters</h3>
-          </div>
-          
-          <div className="flex flex-col gap-6 md:flex-row">
-            <div className="flex-1">
-              <h4 className="mb-3 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
-                Order Status
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {orderFilters.map((filter) => {
-                  const Icon = filter.icon;
-                  return (
-                    <button 
-                      key={filter.value}
-                      onClick={() => setActiveStatusFilter(filter.value)}
-                      className={`flex items-center gap-2 px-4 py-2.5 transition-all duration-300 border rounded-lg hover:shadow-sm active:scale-95 ${
-                        activeStatusFilter === filter.value ? 'scale-105' : ''
-                      }`}
-                      style={{ 
-                        borderColor: activeStatusFilter === filter.value ? filter.color || 'var(--accent-400)' : 'var(--primary-200)',
-                        backgroundColor: activeStatusFilter === filter.value ? 
-                          (filter.color ? `${filter.color}15` : 'var(--accent-50)') : 'transparent',
-                        color: activeStatusFilter === filter.value ? 
-                          (filter.color || 'var(--accent-700)') : 'var(--primary-700)'
-                      }}
-                    >
-                      <Icon size={16} />
-                      {filter.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="mb-3 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
-                Time Period
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {timeFilters.map((filter) => (
-                  <button 
-                    key={filter.value}
-                    onClick={() => setActiveTimeFilter(filter.value)}
-                    className={`flex items-center gap-2 px-4 py-2.5 transition-all duration-300 border rounded-lg hover:shadow-sm active:scale-95 ${
-                      activeTimeFilter === filter.value ? 'scale-105' : ''
-                    }`}
-                    style={{ 
-                      borderColor: activeTimeFilter === filter.value ? 'var(--accent-400)' : 'var(--primary-200)',
-                      backgroundColor: activeTimeFilter === filter.value ? 'var(--accent-50)' : 'transparent',
-                      color: activeTimeFilter === filter.value ? 'var(--accent-700)' : 'var(--primary-700)'
-                    }}
-                  >
-                    {filter.value === 'LAST_30_DAYS' && <Calendar size={16} />}
-                    {filter.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Status Filter Pills */}
+        <div className="mb-6 overflow-x-auto">
+          <div className="flex gap-2 p-2">
+            {orderFilters.map((filter) => {
+              const Icon = getStatusIcon(filter.value);
+              const isActive = activeStatusFilter === filter.value;
+              const count = orders.filter(o => filter.value === 'ALL' || o.status === filter.value).length;
+              
+              return (
+                <button
+                  key={filter.value}
+                  onClick={() => setActiveStatusFilter(filter.value)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full transition-all duration-200 flex-shrink-0 border ${
+                    isActive 
+                      ? `scale-105 shadow-sm ${filter.bgColor} ${filter.textColor} ${filter.borderColor}` 
+                      : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-200 hover:shadow-sm'
+                  }`}
+                >
+                  {filter.value !== 'ALL' && <Icon className={`w-4 h-4 ${isActive ? filter.textColor : 'text-gray-500'}`} />}
+                  <span className="font-medium">{filter.label}</span>
+                  <span className={`px-1.5 py-0.5 text-xs rounded-full ${
+                    isActive ? 'font-semibold bg-white/60' : 'font-normal bg-gray-100'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Orders List */}
         {error ? (
-          <div className="p-8 text-center bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-            <div className="mb-4 text-6xl">😔</div>
-            <h3 className="mb-2 text-xl font-bold" style={{ color: 'var(--primary-800)' }}>
-              Unable to Load Orders
+          <div className="p-6 text-center bg-white border border-gray-200 shadow-sm rounded-xl">
+            <div className="mb-4 text-4xl">😔</div>
+            <h3 className="mb-2 text-lg font-bold text-gray-800">
+              Something went wrong
             </h3>
-            <p className="mb-6" style={{ color: 'var(--primary-600)' }}>{error}</p>
+            <p className="mb-4 text-sm text-gray-600">{error}</p>
             <button 
               onClick={fetchOrders}
-              className="px-6 py-2.5 font-medium transition-all duration-200 rounded-lg hover:shadow-sm"
-              style={{ 
-                backgroundColor: 'var(--accent-500)',
-                color: 'white'
-              }}
+              className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
             >
               Try Again
             </button>
           </div>
         ) : orders.length === 0 ? (
-          <div className="p-8 text-center bg-white border shadow-sm rounded-2xl" style={{ borderColor: 'var(--primary-100)' }}>
-            <div className="mb-4 text-6xl">📦</div>
-            <h3 className="mb-2 text-xl font-bold" style={{ color: 'var(--primary-800)' }}>
-              No Orders Yet
+          <div className="p-8 text-center bg-white border border-gray-200 shadow-sm rounded-xl">
+            <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gray-100 rounded-full">
+              <ShoppingBag className="w-6 h-6 text-gray-600" />
+            </div>
+            <h3 className="mb-2 text-lg font-bold text-gray-800">
+              No Orders Found
             </h3>
-            <p className="mb-6" style={{ color: 'var(--primary-600)' }}>
+            <p className="mb-4 text-sm text-gray-600">
               {activeStatusFilter !== 'ALL' 
-                ? `No ${orderFilters.find(f => f.value === activeStatusFilter)?.label.toLowerCase()} orders found.`
+                ? `You don't have any ${orderFilters.find(f => f.value === activeStatusFilter)?.label.toLowerCase()} orders.`
                 : "Start shopping to see your orders here!"}
             </p>
             <button 
               onClick={() => router.push("/")}
-              className="px-6 py-2.5 font-medium transition-all duration-200 rounded-lg hover:shadow-sm"
-              style={{ 
-                backgroundColor: 'var(--accent-500)',
-                color: 'white'
-              }}
+              className="px-4 py-2 text-sm font-medium text-white transition-colors bg-gray-900 rounded-lg hover:bg-black"
             >
-              Start Shopping
+              Browse Products
             </button>
           </div>
         ) : (
@@ -376,351 +285,298 @@ export default function OrdersPage() {
             {orders.map((order) => {
               const StatusIcon = getStatusIcon(order.status);
               const statusColor = getStatusColor(order.status);
-              const totalItems = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-              
+              const totalItems = getTotalItems(order);
+              const isExpanded = expandedOrder === order.id;
+              const timelineSteps = getTimelineSteps(order.status);
+
               return (
-                <div key={order.id} className="overflow-hidden bg-white border shadow-sm rounded-2xl" 
-                     style={{ borderColor: 'var(--primary-100)' }}>
+                <div key={order.id} className={`overflow-hidden bg-white border rounded-xl transition-all duration-300 ${
+                  isExpanded ? 'border-gray-300 shadow-lg' : 'border-gray-200 shadow-sm'
+                }`}>
                   
-                  {/* Order Header */}
-                  <div className="p-6">
-                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-full" style={{ backgroundColor: `${statusColor}15` }}>
-                          <StatusIcon size={20} style={{ color: statusColor }} />
+                  {/* Order Summary Card */}
+                  <div 
+                    className="p-4 transition-colors cursor-pointer hover:bg-gray-50"
+                    onClick={() => toggleOrderDetails(order.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg transition-transform duration-300 ${
+                          isExpanded ? 'rotate-90 bg-gray-100' : ''
+                        }`}>
+                          <ChevronRight className="w-4 h-4 text-gray-500" />
                         </div>
+                        
                         <div>
-                          <h4 className="font-bold" style={{ color: 'var(--primary-900)' }}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-1.5">
+                              <StatusIcon className={`w-3.5 h-3.5 ${statusColor.icon}`} />
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${statusColor.bg} ${statusColor.text} ${statusColor.border}`}>
+                                {order.status}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {formatDate(order.createdAt)}
+                            </span>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900">
                             Order #{order.id.slice(-8).toUpperCase()}
-                          </h4>
-                          <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
-                            Placed on {formatDate(order.createdAt)}
                           </p>
                         </div>
                       </div>
                       
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="px-3 py-1.5 rounded-full text-sm font-medium"
-                              style={{ 
-                                backgroundColor: `${statusColor}15`,
-                                color: statusColor
-                              }}>
-                          {order.status}
-                        </span>
-                        <span className="text-lg font-bold" style={{ color: 'var(--primary-900)' }}>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-gray-900">
                           {formatPrice(order.totalAmount)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Order Summary */}
-                    <div className="grid grid-cols-1 gap-4 mt-6 sm:grid-cols-3">
-                      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--primary-50)' }}>
-                        <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
-                          Items
                         </p>
-                        <p className="font-bold" style={{ color: 'var(--primary-900)' }}>
+                        <p className="text-xs text-gray-500">
                           {totalItems} item{totalItems !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                      
-                      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--primary-50)' }}>
-                        <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
-                          Delivery Address
-                        </p>
-                        <p className="font-medium truncate" style={{ color: 'var(--primary-900)' }}>
-                          {order.address?.city || 'N/A'}
-                        </p>
-                      </div>
-                      
-                      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--primary-50)' }}>
-                        <p className="mb-1 text-sm font-medium" style={{ color: 'var(--primary-600)' }}>
-                          Payment Method
-                        </p>
-                        <p className="font-medium" style={{ color: 'var(--primary-900)' }}>
-                          Cash on Delivery
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Expand/Collapse Button */}
-                  <button
-                    onClick={() => toggleOrderDetails(order.id)}
-                    className="flex items-center justify-center w-full py-3 border-t hover:bg-gray-50"
-                    style={{ borderColor: 'var(--primary-100)' }}
-                  >
-                    {expandedOrder === order.id ? (
-                      <ChevronDown size={20} style={{ color: 'var(--primary-600)' }} />
-                    ) : (
-                      <ChevronRight size={20} style={{ color: 'var(--primary-600)' }} />
-                    )}
-                  </button>
-
                   {/* Expanded Details */}
-                  {expandedOrder === order.id && (
-                    <div className="p-6 border-t" style={{ borderColor: 'var(--primary-100)', backgroundColor: 'var(--primary-25)' }}>
-                      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                  {isExpanded && (
+                    <div className="border-t border-gray-100">
+                      
+                      {/* Order Timeline */}
+                      <div className="p-6 bg-gradient-to-r from-gray-100 to-blue-100 text-slate-600">
+                        <h3 className="mb-4 text-sm font-semibold tracking-wide text-gray-700 uppercase">
+                          Order Progress
+                        </h3>
+                        
+                        <div className="relative">
+                          {timelineSteps.map((step, index) => {
+                            const stepColor = getStatusColor(step.status === 'ORDER_PLACED' ? 'PENDING' : step.status);
+                            const isStepCompleted = step.isCompleted && !step.isCancelled;
+                            const isStepCurrent = step.isCurrent && !step.isCancelled;
+                            
+                            return (
+                              <div key={step.status} className="relative flex items-center mb-8 last:mb-0">
+                                {/* Connection Line */}
+                                {index < timelineSteps.length - 1 && (
+                                  <div className={`absolute left-5 top-10 bottom-0 w-0.5 z-0 ${
+                                    isStepCompleted ? stepColor.bg : 'bg-gray-200'
+                                  }`}></div>
+                                )}
+                                
+                                {/* Step Icon */}
+                                <div className="relative z-10 flex-shrink-0">
+                                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2  transition-all duration-300 ${
+                                    step.isCancelled ? 'bg-rose-50 border-rose-300' :
+                                    isStepCurrent ? 'scale-110 shadow-md' : ''
+                                  } ${
+                                    isStepCompleted ? `${stepColor.bg.replace('100', '500')} border-transparent` :
+                                    `bg-white ${step.isCancelled ? 'border-rose-300' : stepColor.border}`
+                                  }`}>
+                                    {isStepCompleted ? (
+                                      <CheckCircle className="w-5 h-5 text-white" />
+                                    ) : step.isCancelled ? (
+                                      <XCircle className="w-5 h-5 text-rose-500" />
+                                    ) : (
+                                      <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                        isStepCurrent ? 'scale-125' : ''
+                                      } ${isStepCurrent ? stepColor.icon : 'text-gray-400'}`}></div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {/* Step Details */}
+                                <div className="flex-1 ml-4">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className={`font-medium ${
+                                      (isStepCompleted || isStepCurrent) ? 'font-semibold' : ''
+                                    } ${
+                                      isStepCompleted ? stepColor.text :
+                                      isStepCurrent ? stepColor.text :
+                                      step.isCancelled ? 'text-rose-600' : 'text-gray-700'
+                                    }`}>
+                                      {step.label}
+                                    </h4>
+                                    <span className="text-xs text-gray-500">
+                                      {step.defaultDate}
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-sm text-gray-600">
+                                    {step.description}
+                                  </p>
+                                  {step.isCurrent && order.status === 'SHIPPED' && (
+                                    <div className="inline-flex items-center gap-1 px-3 py-1 mt-2 text-xs font-medium text-blue-700 rounded-full bg-blue-50">
+                                      <Truck className="w-3 h-3" />
+                                      Estimated delivery: 3-5 business days
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Order Items & Details Grid */}
+                      <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3">
+                        
                         {/* Order Items */}
                         <div className="lg:col-span-2">
-                          <h5 className="mb-4 font-bold" style={{ color: 'var(--primary-800)' }}>
-                            Order Items
-                          </h5>
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-sm font-semibold tracking-wide text-gray-700 uppercase">
+                              Order Items ({totalItems})
+                            </h4>
+                            <span className="text-sm text-gray-500">Total: {formatPrice(order.totalAmount)}</span>
+                          </div>
                           <div className="space-y-4">
                             {order.items?.map((item, index) => (
-                              <div key={index} className="flex items-start gap-4 p-4 bg-white border rounded-xl" 
-                                   style={{ borderColor: 'var(--primary-100)' }}>
+                              <div key={index} className="flex items-center gap-4 p-4 transition-shadow border border-gray-100 rounded-xl bg-gray-50 hover:shadow-sm">
                                 <img 
-                                  src={item.product?.images?.[0]} 
+                                  src={item.product?.images?.[0] || '/placeholder-product.jpg'} 
                                   alt={item.product?.name}
-                                  className="object-cover w-20 h-20 rounded-lg"
+                                  className="flex-shrink-0 object-cover w-16 h-16 p-1 bg-white border border-gray-200 rounded-lg"
                                 />
-                                <div className="flex-1">
-                                  <h6 className="font-medium" style={{ color: 'var(--primary-900)' }}>
+                                <div className="flex-1 min-w-0">
+                                  <h5 className="font-medium text-gray-900 truncate">
                                     {item.product?.name}
-                                  </h6>
-                                  <div className="flex flex-wrap gap-4 mt-2 text-sm">
-                                    <span style={{ color: 'var(--primary-600)' }}>
+                                  </h5>
+                                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded">
+                                      <Tag className="w-3 h-3 text-gray-500" />
                                       Qty: {item.quantity}
                                     </span>
-                                    <span style={{ color: 'var(--primary-600)' }}>
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded">
                                       Size: {item.size}
                                     </span>
-                                    <span style={{ color: 'var(--primary-600)' }}>
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded">
                                       Color: {item.color}
                                     </span>
                                   </div>
-                                  <div className="flex items-center justify-between mt-3">
-                                    <span className="font-bold" style={{ color: 'var(--primary-900)' }}>
-                                      {formatPrice(item.price * item.quantity)}
-                                    </span>
-                                    {order.status === 'DELIVERED' && (
-                                      <button className="flex items-center gap-1 px-3 py-1 text-sm font-medium transition-colors rounded-lg hover:shadow-sm"
-                                              style={{ 
-                                                backgroundColor: 'var(--accent-50)',
-                                                color: 'var(--accent-700)'
-                                              }}>
-                                        <Star size={14} />
-                                        Review
-                                      </button>
-                                    )}
-                                  </div>
+                                </div>
+                                <div className="flex-shrink-0 text-right">
+                                  <p className="font-bold text-gray-900">
+                                    {formatPrice(item.price * item.quantity)}
+                                  </p>
+                                  <p className="mt-1 text-sm text-gray-500">
+                                    {formatPrice(item.price)} each
+                                  </p>
                                 </div>
                               </div>
                             ))}
                           </div>
+                        </div>
 
+                        {/* Order & Shipping Information */}
+                        <div className="space-y-6">
                           
-                        {/* Order Timeline */}
-                        <div className="p-3 mt-8 bg-sky-200">
-                          <h5 className="mb-4 font-bold" style={{ color: 'var(--primary-800)' }}>
-                            Order Timeline
-                          </h5>
-                          <div className="relative">
-                            {[
-                              { status: 'PENDING', label: 'Order Placed', description: 'Your order has been placed' },
-                              { status: 'PROCESSING', label: 'Processing', description: 'We are preparing your order' },
-                              { status: 'SHIPPED', label: 'Shipped', description: 'Your order is on the way' },
-                              { status: 'DELIVERED', label: 'Delivered', description: 'Your order has been delivered' },
-                            ].map((step, index, array) => {
-                              // Get the index of the current step and order status
-                              const stepIndex = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'].indexOf(step.status);
-                              const orderStatusIndex = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'].indexOf(order.status);
-                              
-                              // Step is completed if order status has reached this step or beyond
-                              const isCompleted = orderStatusIndex >= stepIndex;
-                              
-                              // Step is current if order status exactly matches this step
-                              const isCurrent = order.status === step.status;
-                              
-                              // Step is pending if order status hasn't reached this step yet
-                              const isPending = orderStatusIndex < stepIndex;
-                              
-                              return (
-                                <div key={step.status} className="flex items-start mb-6 last:mb-0">
-                                  <div 
-                                    className="relative z-10 flex items-center justify-center flex-shrink-0 w-8 h-8 mr-4 rounded-full"
-                                    style={{ 
-                                      backgroundColor: isCurrent ? getStatusColor(step.status) : 
-                                                isCompleted ? getStatusColor(step.status) : 'var(--primary-200)',
-                                      color: isCompleted ? 'white' : 'var(--primary-600)',
-                                      border: isCurrent ? `2px solid white` : 'none',
-                                      boxShadow: isCurrent ? `0 0 0 2px ${getStatusColor(step.status)}` : 'none'
-                                    }}
-                                  >
-                                    {isCompleted ? (
-                                      isCurrent ? (
-                                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                                      ) : (
-                                        '✓'
-                                      )
-                                    ) : (
-                                      index + 1
-                                    )}
-                                  </div>
-                                  <div>
-                                    <h6 
-                                      className="font-medium" 
-                                      style={{ 
-                                        color: isCurrent ? getStatusColor(step.status) : 
-                                              isCompleted ? getStatusColor(step.status) : 'var(--primary-800)' 
-                                      }}
-                                    >
-                                      {step.label}
-                                    </h6>
-                                    <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
-                                      {isCurrent ? 'In Progress' : 
-                                      isCompleted ? 'Completed' : 'Pending'}
-                                    </p>
-                                    {isCurrent && (
-                                      <p className="mt-1 text-xs" style={{ color: 'var(--primary-500)' }}>
-                                        {step.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                  {index < array.length - 1 && (
-                                    <div 
-                                      className="absolute left-4 top-8 bottom-0 w-0.5 z-0" 
-                                      style={{ 
-                                        backgroundColor: isCompleted ? getStatusColor(step.status) : 'var(--primary-200)',
-                                        height: 'calc(100% - 2rem)'
-                                      }}
-                                    ></div>
-                                  )}
+                          {/* Shipping Address */}
+                          <div className="p-4 border border-gray-200 rounded-xl bg-gradient-to-br from-white to-gray-50">
+                            <div className="flex items-center gap-2 mb-3">
+                              <MapPin className="w-4 h-4 text-blue-600" />
+                              <h4 className="font-medium text-gray-800">
+                                Shipping Address
+                              </h4>
+                            </div>
+                            {order.address ? (
+                              <div className="space-y-3 text-sm">
+                                <div className="flex items-center gap-2 p-2 bg-white border border-gray-100 rounded-lg">
+                                  <User className="flex-shrink-0 w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-700">{order.address.firstName} {order.address.lastName}</span>
                                 </div>
-                              );
-                            })}
+                                <div className="p-2 bg-white border border-gray-100 rounded-lg">
+                                  <div className="flex items-start gap-2">
+                                    <Home className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                                    <div className="text-gray-700">
+                                      <p>{order.address.street}</p>
+                                      <p>{order.address.city}, {order.address.state} {order.address.zipCode}</p>
+                                      <p>{order.address.country}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 p-2 bg-white border border-gray-100 rounded-lg">
+                                  <Phone className="flex-shrink-0 w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-700">{order.address.phone}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500">No address provided</p>
+                            )}
                           </div>
-                          
-                          {/* Show estimated delivery for shipped orders */}
-                          {order.status === 'SHIPPED' && (
-                            <div className="p-4 mt-4 rounded-lg" style={{ 
-                              backgroundColor: 'var(--primary-50)',
-                              border: '1px solid var(--primary-200)'
-                            }}>
-                              <div className="flex items-center gap-3">
-                                <Truck size={16} style={{ color: 'var(--primary-600)' }} />
-                                <div>
-                                  <p className="text-sm font-medium" style={{ color: 'var(--primary-800)' }}>
-                                    Estimated Delivery
-                                  </p>
-                                  <p className="text-sm" style={{ color: 'var(--primary-600)' }}>
-                                    Your order should arrive within 3-5 business days
-                                  </p>
+
+                          {/* Payment Summary */}
+                          <div className="p-4 border rounded-xl bg-gradient-to-br from-white to-emerald-50/30 border-emerald-100">
+                            <div className="flex items-center gap-2 mb-3">
+                              <CreditCard className="w-4 h-4 text-emerald-600" />
+                              <h4 className="font-medium text-gray-800">
+                                Payment Summary
+                              </h4>
+                            </div>
+                            <div className="space-y-3 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Subtotal</span>
+                                <span className="font-medium text-gray-800">{formatPrice(order.totalAmount)}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Shipping</span>
+                                <span className="font-medium text-emerald-600">Free</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Tax</span>
+                                <span className="font-medium text-gray-800">Included</span>
+                              </div>
+                              <div className="pt-3 mt-3 border-t border-gray-200">
+                                <div className="flex items-center justify-between font-semibold">
+                                  <span className="text-gray-900">Total</span>
+                                  <span className="text-lg text-gray-900">{formatPrice(order.totalAmount)}</span>
                                 </div>
+                              </div>
+                              <div className="pt-2 mt-2 border-t border-gray-200">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-500">Payment Method</span>
+                                  <span className="flex items-center gap-1 font-medium text-gray-700">
+                                    <DollarSign className="w-3 h-3" />
+                                    Cash on Delivery
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Customer Note */}
+                          {order.customerNote && (
+                            <div className="p-4 border rounded-xl bg-gradient-to-br from-white to-amber-50/30 border-amber-100">
+                              <div className="flex items-center gap-2 mb-3">
+                                <MessageSquare className="w-4 h-4 text-amber-600" />
+                                <h4 className="font-medium text-gray-800">
+                                  Your Note
+                                </h4>
+                              </div>
+                              <div className="p-3 text-sm italic bg-white border rounded-lg border-amber-200">
+                                "{order.customerNote}"
                               </div>
                             </div>
                           )}
-                        </div>
 
-                        </div>
-
-                        {/* Order Details Sidebar */}
-                        <div>
-                          <h5 className="mb-4 font-bold" style={{ color: 'var(--primary-800)' }}>
-                            Order Details
-                          </h5>
-                          <div className="p-4 bg-white border rounded-xl" style={{ borderColor: 'var(--primary-100)' }}>
-                            
-                            {/* Customer Note */}
-                            {order.customerNote && (
-                              <div className="mb-6">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <MessageSquare size={16} style={{ color: 'var(--primary-600)' }} />
-                                  <span className="text-sm font-medium" style={{ color: 'var(--primary-700)' }}>
-                                    Your Note
-                                  </span>
-                                </div>
-                                <p className="p-3 text-sm rounded-lg" style={{ 
-                                  backgroundColor: 'var(--primary-50)',
-                                  color: 'var(--primary-700)'
-                                }}>
-                                  "{order.customerNote}"
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Shipping Address */}
-                            <div className="mb-6">
-                              <div className="flex items-center gap-2 mb-2">
-                                <MapPin size={16} style={{ color: 'var(--primary-600)' }} />
-                                <span className="text-sm font-medium" style={{ color: 'var(--primary-700)' }}>
-                                  Shipping Address
-                                </span>
-                              </div>
-                              {order.address ? (
-                                <div className="text-sm" style={{ color: 'var(--primary-600)' }}>
-                                  <p>{order.address.firstName} {order.address.lastName}</p>
-                                  <p>{order.address.street}</p>
-                                  <p>{order.address.city}, {order.address.state} {order.address.zipCode}</p>
-                                  <p>{order.address.country}</p>
-                                  <p className="mt-1">{order.address.phone}</p>
-                                </div>
-                              ) : (
-                                <p className="text-sm" style={{ color: 'var(--primary-500)' }}>No address provided</p>
-                              )}
-                            </div>
-
-                            {/* Order Summary */}
-                            <div className="mb-6">
-                              <div className="space-y-3">
-                                <div className="flex justify-between">
-                                  <span style={{ color: 'var(--primary-600)' }}>Subtotal</span>
-                                  <span style={{ color: 'var(--primary-800)' }}>
-                                    {formatPrice(order.totalAmount)}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span style={{ color: 'var(--primary-600)' }}>Shipping</span>
-                                  <span style={{ color: 'var(--primary-800)' }}>Free</span>
-                                </div>
-                                <div className="pt-3 border-t">
-                                  <div className="flex justify-between font-bold">
-                                    <span style={{ color: 'var(--primary-900)' }}>Total</span>
-                                    <span style={{ color: 'var(--primary-900)' }}>
-                                      {formatPrice(order.totalAmount)}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="space-y-3">
+                          {/* Actions */}
+                          <div className="pt-4 space-y-3 border-t border-gray-200">
+                            {order.status === 'PENDING' && (
                               <button 
-                                onClick={() => router.push(`/user/dashboard/orderDetails/${order.id}`)}
-                                className="flex items-center justify-center w-full gap-2 py-2.5 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95"
-                                style={{ 
-                                  borderColor: 'var(--primary-200)',
-                                  color: 'var(--primary-700)'
-                                }}
+                                onClick={() => cancelOrder(order.id, "Customer requested cancellation")}
+                                className="w-full py-2.5 font-medium transition-all duration-200 border border-rose-300 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg hover:shadow-sm active:scale-95 flex items-center justify-center gap-2"
                               >
-                                <Eye size={16} />
-                                View Full Details
+                                <XCircle className="w-4 h-4" />
+                                Cancel Order
                               </button>
-                              
-                              {order.status === 'PENDING' && (
-                                <button 
-                                  onClick={() => cancelOrder(order.id,"all")}
-                                  className="flex items-center justify-center w-full gap-2 py-2.5 font-medium transition-all duration-200 border rounded-lg hover:shadow-sm active:scale-95 text-slate-800"
-                                   
-                                >
-                                  <XCircle size={16} />
-                                  Cancel Order
-                                </button>
-                              )}
-                              
-                              {order.status === 'DELIVERED' && (
-                                <button className="flex items-center justify-center w-full gap-2 py-2.5 font-medium transition-all duration-200 rounded-lg hover:shadow-sm active:scale-95"
-                                        style={{ 
-                                          backgroundColor: 'var(--accent-500)',
-                                          color: 'white'
-                                        }}>
-                                  <Star size={16} />
-                                  Write a Review
-                                </button>
-                              )}
-                            </div>
+                            )}
+                            
+                            {order.status === 'DELIVERED' && (
+                              <button className="w-full py-2.5 font-medium transition-all duration-200 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg hover:shadow-sm active:scale-95">
+                                Write Product Review
+                              </button>
+                            )}
+                            
+                            {order.status === 'SHIPPED' && (
+                              <button className="w-full py-2.5 font-medium transition-all duration-200 border border-blue-300 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg hover:shadow-sm active:scale-95">
+                                Track Package
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

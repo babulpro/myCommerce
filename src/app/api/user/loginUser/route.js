@@ -34,10 +34,10 @@ export async function POST(req) {
 
         // Create session token
         const sessionToken = randomBytes(32).toString('hex');
-        const expires = new Date();
+        let expires = new Date();
         
         // FIXED: getDate() instead of getData()
-        expires.setDate(expires.getDate() + (data.rememberMe ? 30 : 5));
+        expires.setDate(expires.getDate() + (data.rememberMe ? 30 : 7));
 
         // Create session in database
         const session = await prisma.session.create({
@@ -49,16 +49,13 @@ export async function POST(req) {
         });
 
         // Create JWT token
-        const token = await CreateJwtToken(findUser.email, findUser.id);
+        const token = await CreateJwtToken(findUser.role, findUser.id);
 
         // Create response with user data
         const response = NextResponse.json({
             status: "success",
             msg: "User logged in successfully",
-            user: {
-                id: findUser.id,
-                email: findUser.email,
-                name: findUser.name,
+            user: {                
                 role: findUser.role
             },
             token: token // Optional: include token in response for mobile apps

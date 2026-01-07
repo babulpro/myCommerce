@@ -28,7 +28,7 @@ export async function POST(req,res){
             }
        })
 
-       const token = await CreateJwtToken(user.email,user.id) 
+       const token = await CreateJwtToken(user.role,user.id) 
        const response = NextResponse.json({status:"success",msg:"user created successfully"})
 
        response.cookies.set({

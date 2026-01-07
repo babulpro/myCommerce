@@ -43,6 +43,10 @@ export default function Login() {
                 alert("🎉 Login successful!")
                 setData({email:"",password:""})
                 // window.location.reload()
+                if(json.user.role==="ADMIN"){
+
+                    router.push("/admin/pages/order")
+                }
                 router.refresh()
                
             } else {
