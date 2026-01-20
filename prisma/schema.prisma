@@ -161,8 +161,7 @@ model OrderItem{
     price     Float
     size      String
     color     String 
-
-
+    
     productId String   @db.ObjectId
     product   Product  @relation(fields: [productId], references: [id])
 

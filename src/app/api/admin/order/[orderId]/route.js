@@ -1,6 +1,8 @@
 // app/api/admin/orders/[orderId]/route.js
+import { DecodedJwtToken } from "@/lib/authFunction/JwtHelper";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { use } from "react";
 
 export async function GET(request, { params }) {
   try {
@@ -117,6 +119,66 @@ export async function DELETE(request, { params }) {
     console.error("Error cancelling order:", error);
     return NextResponse.json(
       { success: false, error: "Failed to cancel order" },
+      { status: 500 }
+    );
+  }
+}
+
+// Simple PATCH method for order status
+export async function PATCH(request, { params }) {
+  try {
+    const { id } = params;
+    const { status, cancellationReason } = await request.json();
+
+    // Validate status
+    const validStatuses = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json(
+        { status: "error", msg: "Invalid status" },
+        { status: 400 }
+      );
+    }
+
+    // Get current order
+    const currentOrder = await prisma.order.findUnique({
+      where: { id }
+    });
+
+    if (!currentOrder) {
+      return NextResponse.json(
+        { status: "error", msg: "Order not found" },
+        { status: 404 }
+      );
+    }
+
+    // Prepare update data
+    const updateData = {
+      status,
+      updatedAt: new Date()
+    };
+
+    // Add cancellation reason if cancelling
+    if (status === 'CANCELLED' && cancellationReason) {
+      updateData.cancellationReason = cancellationReason;
+    }
+
+    // Update order
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: updateData,
+       
+    });
+
+    return NextResponse.json({
+      status: "success",
+      msg: `Order status updated to ${status}`,
+      order: updatedOrder
+    });
+
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    return NextResponse.json(
+      { status: "error", msg: "Failed to update order status", error: error.message },
       { status: 500 }
     );
   }

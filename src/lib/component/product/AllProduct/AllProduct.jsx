@@ -9,7 +9,7 @@ export default function ProductsGrid() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedType, setSelectedType] = useState("all");
   const [sortBy, setSortBy] = useState("featured");
-  const [priceRange, setPriceRange] = useState([0, 5000]);
+  const [priceRange, setPriceRange] = useState([0, 5000000]);
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [showFilters, setShowFilters] = useState(false);

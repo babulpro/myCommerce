@@ -21,7 +21,10 @@ import {
   Home,
   DollarSign,
   Tag,
-  Archive
+  Archive,
+  Edit3,
+  Save,
+  AlertTriangle
 } from "lucide-react";
 
 export default function OrdersPage() {
@@ -31,6 +34,8 @@ export default function OrdersPage() {
   const [error, setError] = useState(null);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [activeStatusFilter, setActiveStatusFilter] = useState("ALL");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [updatingStatus, setUpdatingStatus] = useState(null);
 
   const orderFilters = [
     { value: "ALL", label: "All Orders", bgColor: "bg-gray-100", textColor: "text-gray-700", borderColor: "border-gray-300" },
@@ -39,6 +44,14 @@ export default function OrdersPage() {
     { value: "SHIPPED", label: "Shipped", bgColor: "bg-indigo-100", textColor: "text-indigo-700", borderColor: "border-indigo-300" },
     { value: "DELIVERED", label: "Delivered", bgColor: "bg-emerald-100", textColor: "text-emerald-700", borderColor: "border-emerald-300" },
     { value: "CANCELLED", label: "Cancelled", bgColor: "bg-rose-100", textColor: "text-rose-700", borderColor: "border-rose-300" },
+  ];
+
+  const statusOptions = [
+    { value: "PENDING", label: "Pending", icon: Clock, color: "text-amber-600", bgColor: "bg-amber-50" },
+    { value: "PROCESSING", label: "Processing", icon: RefreshCw, color: "text-blue-600", bgColor: "bg-blue-50" },
+    { value: "SHIPPED", label: "Shipped", icon: Truck, color: "text-indigo-600", bgColor: "bg-indigo-50" },
+    { value: "DELIVERED", label: "Delivered", icon: CheckCircle, color: "text-emerald-600", bgColor: "bg-emerald-50" },
+    { value: "CANCELLED", label: "Cancelled", icon: XCircle, color: "text-rose-600", bgColor: "bg-rose-50" },
   ];
 
   const formatDate = (dateString) => {
@@ -71,12 +84,62 @@ export default function OrdersPage() {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'PENDING': return { bg: "bg-blue-500", text: "text-amber-700", border: "border-amber-300", icon: "text-amber-500" };
-      case 'PROCESSING': return { bg: "bg-green-400", text: "text-slate-900", border: "border-blue-300", icon: "text-blue-500" };
-      case 'SHIPPED': return { bg: "bg-yellow-500", text: "text-indigo-700", border: "border-indigo-300", icon: "text-indigo-500" };
-      case 'DELIVERED': return { bg: "bg-green-600", text: "text-emerald-700", border: "border-emerald-300", icon: "text-emerald-500" };
+      case 'PENDING': return { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-300", icon: "text-amber-500" };
+      case 'PROCESSING': return { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-300", icon: "text-blue-500" };
+      case 'SHIPPED': return { bg: "bg-indigo-100", text: "text-indigo-700", border: "border-indigo-300", icon: "text-indigo-500" };
+      case 'DELIVERED': return { bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-300", icon: "text-emerald-500" };
       case 'CANCELLED': return { bg: "bg-rose-100", text: "text-rose-700", border: "border-rose-300", icon: "text-rose-500" };
       default: return { bg: "bg-gray-100", text: "text-gray-700", border: "border-gray-300", icon: "text-gray-500" };
+    }
+  };
+
+  // Function to update order status
+  const updateOrderStatus = async (orderId, newStatus) => {
+    if (!newStatus) {
+      alert("Please select a status first");
+      return;
+    }
+
+    if (!confirm(`Change order status to ${newStatus}?`)) {
+      return;
+    }
+
+    setUpdatingStatus(orderId);
+    try {
+      const response = await fetch(`/api/product/order/newOrder`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ 
+          orderId, 
+          status: newStatus 
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.status === "success") {
+        // Update the order in state
+        setOrders(prevOrders => 
+          prevOrders.map(order => 
+            order.id === orderId 
+              ? { ...order, status: newStatus }
+              : order
+          )
+        );
+        
+        // Reset selected status
+        setSelectedStatus("");
+        alert(`Order status updated to ${newStatus}!`);
+      } else {
+        alert(data.msg || "Failed to update order status");
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
@@ -84,16 +147,28 @@ export default function OrdersPage() {
     if (!confirm("Are you sure you want to cancel this order?")) return;
     
     try {
-      const response = await fetch(`/api/product/order/cancelOrder?orderId=${orderId}`, {
+      const response = await fetch(`/api/product/order/newOrder`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cancellationReason: reason })
+        body: JSON.stringify({ 
+          orderId, 
+          status: "CANCELLED",
+          cancellationReason: reason 
+        })
       });
+      
       const data = await response.json();
       
       if (data.status === "success") {
+        // Update the order in state
+        setOrders(prevOrders => 
+          prevOrders.map(order => 
+            order.id === orderId 
+              ? { ...order, status: "CANCELLED" }
+              : order
+          )
+        );
         alert("Order cancelled successfully!");
-        fetchOrders();
       } else {
         alert(data.msg || "Failed to cancel order");
       }
@@ -123,6 +198,7 @@ export default function OrdersPage() {
 
   const toggleOrderDetails = (orderId) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
+    setSelectedStatus(""); // Reset status selection when toggling
   };
 
   const getTotalItems = (order) => {
@@ -288,6 +364,7 @@ export default function OrdersPage() {
               const totalItems = getTotalItems(order);
               const isExpanded = expandedOrder === order.id;
               const timelineSteps = getTimelineSteps(order.status);
+              const isUpdating = updatingStatus === order.id;
 
               return (
                 <div key={order.id} className={`overflow-hidden bg-white border rounded-xl transition-all duration-300 ${
@@ -466,6 +543,68 @@ export default function OrdersPage() {
                         {/* Order & Shipping Information */}
                         <div className="space-y-6">
                           
+                          {/* Update Status Section */}
+                          <div className="p-4 border border-gray-200 rounded-xl bg-gradient-to-br from-white to-gray-50">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Edit3 className="w-4 h-4 text-blue-600" />
+                              <h4 className="font-medium text-gray-800">
+                                Update Order Status
+                              </h4>
+                            </div>
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-2 gap-2">
+                                {statusOptions.map((option) => {
+                                  const Icon = option.icon;
+                                  const isSelected = selectedStatus === option.value;
+                                  
+                                  return (
+                                    <button
+                                      key={option.value}
+                                      onClick={() => setSelectedStatus(option.value)}
+                                      className={`flex items-center justify-center gap-2 p-3 text-sm font-medium border rounded-lg transition-all duration-200 ${
+                                        isSelected 
+                                          ? `scale-95 ${option.bgColor} ${option.color} border-${option.value.toLowerCase()}-300 shadow-sm` 
+                                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      <Icon className="w-4 h-4" />
+                                      <span>{option.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              
+                              <button
+                                onClick={() => updateOrderStatus(order.id, selectedStatus)}
+                                disabled={!selectedStatus || isUpdating || selectedStatus === order.status}
+                                className={`w-full py-3 font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+                                  !selectedStatus || selectedStatus === order.status
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md active:scale-95'
+                                }`}
+                              >
+                                {isUpdating ? (
+                                  <>
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    Updating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Save className="w-4 h-4" />
+                                    Update to {selectedStatus || "Select Status"}
+                                  </>
+                                )}
+                              </button>
+                              
+                              {selectedStatus === order.status && (
+                                <div className="flex items-center gap-2 p-2 text-sm rounded-lg text-amber-700 bg-amber-50">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  <span>Order is already {order.status.toLowerCase()}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
                           {/* Shipping Address */}
                           <div className="p-4 border border-gray-200 rounded-xl bg-gradient-to-br from-white to-gray-50">
                             <div className="flex items-center gap-2 mb-3">

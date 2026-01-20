@@ -741,16 +741,16 @@ Items: ${order.items?.map(item => `${item.product?.name} (${item.quantity}x)`).j
                                   </div>
 
                                   {/* Shipping Address Card */}
-                                  <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-xl">
-                                    <h3 className="flex items-center gap-2 mb-4 text-lg font-semibold text-gray-900">
+                                  <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-xl test-slate-500">
+                                    <h3 className="flex items-center gap-2 mb-4 text-lg font-semibold text-slate-600">
                                       <MapPin className="w-5 h-5" />
                                       Shipping Address
                                     </h3>
-                                    <div className="p-4 rounded-lg bg-gray-50">
+                                    <div className="p-4 rounded-lg ">
                                       <p className="font-medium text-gray-900">{order.address?.firstName} {order.address?.lastName}</p>
-                                      <p className="mt-1 text-gray-600">{order.address?.street}</p>
-                                      <p className="text-gray-600">{order.address?.city}, {order.address?.state} {order.address?.zipCode}</p>
-                                      <p className="text-gray-600">{order.address?.country}</p>
+                                      <p className="mt-1 text-gray-300">{order.address?.street}</p>
+                                      <p className="text-gray-300">{order.address?.city}, {order.address?.state} {order.address?.zipCode}</p>
+                                      <p className="text-gray-300">{order.address?.country}</p>
                                     </div>
                                   </div>
 
