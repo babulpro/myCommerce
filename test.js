@@ -23,15 +23,15 @@ import {
   Filter,
   Calendar,
   Eye,
+  BarChart3,
+  TrendingUp,
   PackageOpen,
   Shield,
   AlertCircle,
   ArrowUpDown,
   FileText,
   Check,
-  X,
-  ShoppingCart,
-  Home
+  X
 } from "lucide-react";
 
 export default function AdminOrdersPage() {
@@ -64,9 +64,7 @@ export default function AdminOrdersPage() {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     });
   };
 
@@ -119,24 +117,25 @@ export default function AdminOrdersPage() {
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
+    if (!newStatus) {
+      alert("Please select a status first");
+      return;
+    }
+
     if (!confirm(`Change order status to ${newStatus}?`)) {
       return;
     }
 
     setUpdatingStatus(orderId);
     try {
-      const response = await fetch(`/api/admin/order/status`, {
+      const response = await fetch(`/api/admin/order/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          orderId, 
-          status: newStatus 
-        })
+        body: JSON.stringify({ status: newStatus })
       });
-
-      const data = await response.json();
       
-      if (data.status === "success") {
+      const data = await response.json();
+      if (data.success) {
         // Update the order in state
         setOrders(prevOrders => 
           prevOrders.map(order => 
@@ -145,63 +144,14 @@ export default function AdminOrdersPage() {
               : order
           )
         );
-        
-        // Recalculate stats
-        const updatedOrders = orders.map(o => o.id === orderId ? {...o, status: newStatus} : o);
-        calculateStats(updatedOrders);
-        
+        calculateStats(orders.map(o => o.id === orderId ? {...o, status: newStatus} : o));
         alert(`Order status updated to ${newStatus}!`);
       } else {
         alert(data.msg || "Failed to update order status");
       }
-    } catch (err) {
-      console.error("Update error:", err);
-      alert("An error occurred. Please try again.");
-    } finally {
-      setUpdatingStatus(null);
-    }
-  };
-
-  const cancelOrder = async (orderId, reason = "Cancelled by admin") => {
-    if (!confirm("Are you sure you want to cancel this order?")) {
-      return;
-    }
-
-    setUpdatingStatus(orderId);
-    try {
-      const response = await fetch(`/api/admin/order/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          orderId, 
-          status: "CANCELLED",
-          cancellationReason: reason 
-        })
-      });
-
-      const data = await response.json();
-      
-      if (data.status === "success") {
-        // Update the order in state
-        setOrders(prevOrders => 
-          prevOrders.map(order => 
-            order.id === orderId 
-              ? { ...order, status: "CANCELLED" }
-              : order
-          )
-        );
-        
-        // Recalculate stats
-        const updatedOrders = orders.map(o => o.id === orderId ? {...o, status: "CANCELLED"} : o);
-        calculateStats(updatedOrders);
-        
-        alert("Order cancelled successfully!");
-      } else {
-        alert(data.msg || "Failed to cancel order");
-      }
-    } catch (err) {
-      console.error("Cancel error:", err);
-      alert("An error occurred. Please try again.");
+    } catch (error) {
+      console.error("Error updating order:", error);
+      alert("Failed to update order status");
     } finally {
       setUpdatingStatus(null);
     }
@@ -302,8 +252,8 @@ Order #${order.id.slice(-8).toUpperCase()}
         <div className="mb-8">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Admin Order Management</h1>
-              <p className="mt-1 text-gray-600">Update status, print addresses, and manage all orders</p>
+              <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Order Management</h1>
+              <p className="mt-1 text-gray-600">Update status, print addresses, and manage orders</p>
             </div>
             <div className="flex gap-3">
               <button 
@@ -329,6 +279,14 @@ Order #${order.id.slice(-8).toUpperCase()}
                 <ShoppingBag className="w-6 h-6 text-blue-600" />
               </div>
             </div>
+            <div className="mt-4">
+              <div className="h-2 bg-gray-200 rounded-full">
+                <div 
+                  className="h-full bg-blue-500 rounded-full" 
+                  style={{ width: stats.total > 0 ? '100%' : '0%' }}
+                ></div>
+              </div>
+            </div>
           </div>
 
           <div className="p-6 transition-shadow bg-white border border-gray-100 rounded-xl hover:shadow-sm">
@@ -339,6 +297,14 @@ Order #${order.id.slice(-8).toUpperCase()}
               </div>
               <div className="p-3 rounded-lg bg-amber-50">
                 <Clock className="w-6 h-6 text-amber-600" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="h-2 bg-gray-200 rounded-full">
+                <div 
+                  className="h-full rounded-full bg-amber-500" 
+                  style={{ width: `${stats.total > 0 ? (stats.pending / stats.total) * 100 : 0}%` }}
+                ></div>
               </div>
             </div>
           </div>
@@ -353,6 +319,14 @@ Order #${order.id.slice(-8).toUpperCase()}
                 <PackageOpen className="w-6 h-6 text-blue-600" />
               </div>
             </div>
+            <div className="mt-4">
+              <div className="h-2 bg-gray-200 rounded-full">
+                <div 
+                  className="h-full bg-blue-500 rounded-full" 
+                  style={{ width: `${stats.total > 0 ? (stats.processing / stats.total) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
           </div>
 
           <div className="p-6 transition-shadow bg-white border border-gray-100 rounded-xl hover:shadow-sm">
@@ -365,15 +339,23 @@ Order #${order.id.slice(-8).toUpperCase()}
                 <DollarSign className="w-6 h-6 text-emerald-600" />
               </div>
             </div>
+            <div className="mt-4">
+              <div className="h-2 bg-gray-200 rounded-full">
+                <div 
+                  className="h-full rounded-full bg-emerald-500" 
+                  style={{ width: stats.totalRevenue > 0 ? '100%' : '0%' }}
+                ></div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="p-6 mb-8 bg-white border border-gray-100 text-slate-900 rounded-xl">
+        <div className="p-6 mb-8 bg-white border border-gray-100 rounded-xl">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute w-5 h-5 transform -translate-y-1/2 text-slate-900 left-3 top-1/2" />
+              <Search className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
               <input
                 type="text"
                 placeholder="Search by order ID, customer..."
@@ -395,7 +377,7 @@ Order #${order.id.slice(-8).toUpperCase()}
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-              <Filter className="absolute w-4 h-4 transform -translate-y-1/2 pointer-events-none text-slate-900 right-3 top-1/2" />
+              <Filter className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 pointer-events-none right-3 top-1/2" />
             </div>
 
             {/* Action Buttons */}
@@ -406,13 +388,13 @@ Order #${order.id.slice(-8).toUpperCase()}
                   setSelectedStatus("ALL");
                   fetchOrders();
                 }}
-                className="flex-1 px-4 py-3 transition-colors bg-gray-100 border border-gray-200 rounded-lg text-slate-900 hover:bg-gray-200"
+                className="flex-1 px-4 py-3 text-gray-700 transition-colors bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200"
               >
                 Clear Filters
               </button>
               <button
                 onClick={fetchOrders}
-                className="flex-1 px-4 py-3 transition-colors bg-blue-600 rounded-lg text-slate-900 hover:bg-blue-700"
+                className="flex-1 px-4 py-3 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
               >
                 Apply
               </button>
@@ -478,10 +460,7 @@ Order #${order.id.slice(-8).toUpperCase()}
                                   <Calendar className="w-3 h-3 text-gray-400" />
                                   <span className="text-xs text-gray-500">{formatDate(order.createdAt)}</span>
                                 </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <ShoppingCart className="w-3 h-3 text-gray-400" />
-                                  <span className="text-xs text-gray-500">{totalItems} items</span>
-                                </div>
+                                <p className="mt-1 text-xs text-gray-500">{totalItems} items</p>
                               </div>
                             </div>
                           </td>
@@ -528,16 +507,6 @@ Order #${order.id.slice(-8).toUpperCase()}
                               >
                                 <Printer className="w-4 h-4" />
                               </button>
-                              {order.status === 'PENDING' && (
-                                <button
-                                  onClick={() => cancelOrder(order.id)}
-                                  disabled={isUpdating}
-                                  className="p-2 text-gray-500 transition-colors rounded-lg hover:text-rose-600 hover:bg-rose-50"
-                                  title="Cancel Order"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              )}
                             </div>
                           </td>
                         </tr>
@@ -554,45 +523,35 @@ Order #${order.id.slice(-8).toUpperCase()}
                                     Order Summary
                                   </h3>
                                   <div className="space-y-4">
-                                    <div className="p-3 rounded-lg bg-gray-50">
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-600">Order ID</span>
-                                        <span className="font-medium text-gray-900">
-                                          #{order.id.slice(-8).toUpperCase()}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between mt-2">
-                                        <span className="text-gray-600">Date</span>
-                                        <span className="font-medium text-gray-900">
-                                          {formatDate(order.createdAt)}
-                                        </span>
-                                      </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                      <span className="text-gray-600">Order ID</span>
+                                      <span className="font-medium text-gray-900">
+                                        #{order.id.slice(-8).toUpperCase()}
+                                      </span>
                                     </div>
-
-                                    <div className="p-3 rounded-lg bg-gray-50">
-                                      <p className="mb-2 font-medium text-gray-900">Order Items ({totalItems})</p>
-                                      <div className="space-y-2">
-                                        {order.items?.map((item, index) => (
-                                          <div key={index} className="flex justify-between text-sm">
-                                            <span className="text-gray-600">
-                                              {item.product?.name || 'Product'} × {item.quantity}
-                                            </span>
-                                            <span className="font-medium text-gray-900">
-                                              {formatPrice(item.price * item.quantity)}
-                                            </span>
-                                          </div>
-                                        ))}
-                                      </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                      <span className="text-gray-600">Order Date</span>
+                                      <span className="font-medium text-gray-900">
+                                        {formatDate(order.createdAt)}
+                                      </span>
                                     </div>
-
-                                    <div className="p-3 rounded-lg bg-blue-50">
-                                      <div className="flex justify-between">
-                                        <span className="font-medium text-gray-900">Total Amount</span>
-                                        <span className="text-xl font-bold text-gray-900">
-                                          {formatPrice(order.totalAmount)}
-                                        </span>
-                                      </div>
-                                      <p className="mt-1 text-sm text-gray-600">Cash on Delivery</p>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                      <span className="text-gray-600">Items</span>
+                                      <span className="font-medium text-gray-900">
+                                        {totalItems} items
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                      <span className="text-gray-600">Total Amount</span>
+                                      <span className="font-bold text-gray-900">
+                                        {formatPrice(order.totalAmount)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between py-2">
+                                      <span className="text-gray-600">Payment Method</span>
+                                      <span className="font-medium text-gray-900">
+                                        Cash on Delivery
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
@@ -604,22 +563,21 @@ Order #${order.id.slice(-8).toUpperCase()}
                                     Customer & Shipping
                                   </h3>
                                   <div className="space-y-6">
-                                    <div className="p-3 rounded-lg bg-gray-50">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <User className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium text-gray-900">Customer</span>
-                                      </div>
-                                      <p className="font-medium">{order.user?.name || 'Guest Customer'}</p>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <Mail className="w-3 h-3 text-gray-400" />
-                                        <span className="text-sm text-gray-600">
-                                          {order.user?.email || 'No email provided'}
-                                        </span>
+                                    <div>
+                                      <h4 className="mb-2 font-medium text-gray-900">Customer Information</h4>
+                                      <div className="p-3 rounded-lg bg-gray-50">
+                                        <p className="font-medium">{order.user?.name || 'Guest Customer'}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Mail className="w-3 h-3 text-gray-400" />
+                                          <span className="text-sm text-gray-600">
+                                            {order.user?.email || 'No email provided'}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
 
                                     <div>
-                                      <div className="flex items-center justify-between mb-3">
+                                      <div className="flex items-center justify-between mb-2">
                                         <h4 className="font-medium text-gray-900">Shipping Address</h4>
                                         <button
                                           onClick={() => copyAddress(order)}
@@ -630,21 +588,19 @@ Order #${order.id.slice(-8).toUpperCase()}
                                         </button>
                                       </div>
                                       <div className="p-4 border border-blue-100 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50">
-                                        <div className="space-y-2">
-                                          <div className="flex items-start gap-2">
-                                            <Home className="flex-shrink-0 w-4 h-4 text-blue-600 mt-0.5" />
-                                            <div>
-                                              <p className="font-medium text-gray-900">{order.address?.firstName} {order.address?.lastName}</p>
-                                              <p className="text-gray-700">{order.address?.street}</p>
-                                              <p className="text-gray-700">
-                                                {order.address?.city}, {order.address?.state} {order.address?.zipCode}
-                                              </p>
-                                              <p className="text-gray-700">{order.address?.country}</p>
+                                        <div className="flex items-start gap-2">
+                                          <MapPin className="flex-shrink-0 w-4 h-4 text-blue-600 mt-0.5" />
+                                          <div>
+                                            <p className="font-medium">{order.address?.firstName} {order.address?.lastName}</p>
+                                            <p className="text-gray-700">{order.address?.street}</p>
+                                            <p className="text-gray-700">
+                                              {order.address?.city}, {order.address?.state} {order.address?.zipCode}
+                                            </p>
+                                            <p className="text-gray-700">{order.address?.country}</p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                              <Phone className="w-3 h-3 text-gray-500" />
+                                              <span className="text-sm text-gray-700">{order.address?.phone}</span>
                                             </div>
-                                          </div>
-                                          <div className="flex items-center gap-2 pt-2 border-t border-blue-100">
-                                            <Phone className="w-4 h-4 text-blue-500" />
-                                            <span className="font-medium text-gray-700">{order.address?.phone}</span>
                                           </div>
                                         </div>
                                       </div>
@@ -696,47 +652,48 @@ Order #${order.id.slice(-8).toUpperCase()}
                                       })}
                                     </div>
 
-                                    {order.status === 'PENDING' && (
-                                      <button
-                                        onClick={() => cancelOrder(order.id)}
-                                        disabled={isUpdating}
-                                        className={`flex items-center justify-center w-full gap-2 py-3 font-medium rounded-lg transition-colors ${
-                                          isUpdating
-                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            : 'text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200'
-                                        }`}
-                                      >
-                                        {isUpdating ? (
-                                          <>
-                                            <RefreshCw className="w-4 h-4 animate-spin" />
-                                            Cancelling...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <X className="w-4 h-4" />
-                                            Cancel Order
-                                          </>
-                                        )}
-                                      </button>
-                                    )}
-
-                                    <div className="p-3 border rounded-lg bg-amber-50 border-amber-100">
+                                    <div className="p-4 border rounded-lg bg-amber-50 border-amber-100">
                                       <div className="flex items-start gap-2">
                                         <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                                         <div>
-                                          <p className="text-sm font-medium text-amber-800">Quick Status Guide</p>
+                                          <p className="text-sm font-medium text-amber-800">Status Guidelines</p>
                                           <ul className="mt-1 space-y-1 text-xs text-amber-700">
-                                            <li>• PENDING: New order, needs processing</li>
-                                            <li>• PROCESSING: Preparing for shipment</li>
-                                            <li>• SHIPPED: Dispatched to customer</li>
+                                            <li>• PENDING: Order just placed</li>
+                                            <li>• PROCESSING: Order is being prepared</li>
+                                            <li>• SHIPPED: Order has been dispatched</li>
                                             <li>• DELIVERED: Order completed</li>
                                             <li>• CANCELLED: Order cancelled</li>
                                           </ul>
                                         </div>
                                       </div>
                                     </div>
+
+                                    {isUpdating && (
+                                      <div className="flex items-center justify-center gap-2 py-3 text-blue-600 rounded-lg bg-blue-50">
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                        <span>Updating status...</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
+                              </div>
+
+                              {/* Quick Actions */}
+                              <div className="flex flex-col gap-3 mt-6 sm:flex-row">
+                                <button
+                                  onClick={() => printAddress(order)}
+                                  className="flex items-center justify-center gap-2 px-6 py-3 font-medium text-blue-600 transition-colors rounded-lg bg-blue-50 hover:bg-blue-100"
+                                >
+                                  <Printer className="w-4 h-4" />
+                                  Print Full Invoice
+                                </button>
+                                <button
+                                  onClick={() => copyAddress(order)}
+                                  className="flex items-center justify-center gap-2 px-6 py-3 font-medium text-gray-700 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                  Copy All Details
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -748,25 +705,6 @@ Order #${order.id.slice(-8).toUpperCase()}
               </table>
             </div>
           )}
-        </div>
-
-        {/* Footer Stats */}
-        <div className="flex flex-col items-center justify-between gap-4 p-6 mt-8 bg-white border border-gray-100 rounded-xl sm:flex-row">
-          <div className="text-sm text-gray-500">
-            Showing {orders.length} of {stats.total} orders
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">Revenue:</span> {formatPrice(stats.totalRevenue)}
-            </div>
-            <button 
-              onClick={fetchOrders}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200"
-            >
-              <RefreshCw className="w-3 h-3" />
-              Refresh Data
-            </button>
-          </div>
         </div>
       </div>
     </div>
