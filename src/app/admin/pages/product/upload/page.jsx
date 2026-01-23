@@ -1,10 +1,12 @@
 "use client";
+
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Page() {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
+  
 
   const [data, setData] = useState({
     name: "",
@@ -146,6 +148,8 @@ export default function Page() {
       setUploading(false);
     }
   };
+
+
 
   return (
     <div className="min-h-screen p-6" style={{

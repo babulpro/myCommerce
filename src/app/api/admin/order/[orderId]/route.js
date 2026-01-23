@@ -130,44 +130,7 @@ export async function PATCH(request, { params }) {
     const { id } = params;
     const { status, cancellationReason } = await request.json();
 
-    // Validate status
-    const validStatuses = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        { status: "error", msg: "Invalid status" },
-        { status: 400 }
-      );
-    }
-
-    // Get current order
-    const currentOrder = await prisma.order.findUnique({
-      where: { id }
-    });
-
-    if (!currentOrder) {
-      return NextResponse.json(
-        { status: "error", msg: "Order not found" },
-        { status: 404 }
-      );
-    }
-
-    // Prepare update data
-    const updateData = {
-      status,
-      updatedAt: new Date()
-    };
-
-    // Add cancellation reason if cancelling
-    if (status === 'CANCELLED' && cancellationReason) {
-      updateData.cancellationReason = cancellationReason;
-    }
-
-    // Update order
-    const updatedOrder = await prisma.order.update({
-      where: { id },
-      data: updateData,
-       
-    });
+    // 
 
     return NextResponse.json({
       status: "success",

@@ -36,6 +36,7 @@ export async function proxy(req) {
     }
   }
   
+  
   // Protect user dashboard pages
   if (req.nextUrl.pathname.startsWith("/user/pages")) {
     const token = req.cookies.get("token");

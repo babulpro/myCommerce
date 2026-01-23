@@ -301,14 +301,13 @@ export default function AddressPage() {
                                         </button>
                                         <button
                                             onClick={handleDeleteAddress}
-                                            className="px-6 py-3 font-medium transition-colors border rounded-lg"
+                                            className="flex items-center gap-2 px-6 py-3 font-medium transition-colors rounded-lg"
                                             style={{ 
-                                                borderColor: 'var(--error-300)',
-                                                color: 'var(--error-600)',
-                                                backgroundColor: 'var(--error-50)'
+                                                backgroundColor: 'var(--accent-500)',
+                                                color: 'white'
                                             }}
-                                            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--error-100)'}
-                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--error-50)'}
+                                           onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--accent-600)'}
+                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--accent-500)'}
                                         >
                                             Delete Address
                                         </button>

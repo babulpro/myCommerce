@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { 
     ShoppingCart, Trash2, Plus, Minus, Package, Truck, Shield, 
     CreditCard, ArrowLeft, Loader2, Heart, Share2, ChevronRight, 
-    AlertCircle, CheckCircle, ShoppingBag, Rocket
+    AlertCircle, CheckCircle, ShoppingBag, Rocket, X
 } from "lucide-react";
 
 export default function CartPage() {
@@ -18,6 +18,12 @@ export default function CartPage() {
     const [orderMessage, setOrderMessage] = useState(null);
     const [customerNote, setCustomerNote] = useState("");
     const [showNoteModal, setShowNoteModal] = useState(false);
+    
+    // New states for individual item buy now
+    const [buyingSingleItem, setBuyingSingleItem] = useState({});
+    const [showSingleItemModal, setShowSingleItemModal] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [singleItemNote, setSingleItemNote] = useState("");
 
     // Fetch cart data
     const fetchCart = async () => {
@@ -188,7 +194,7 @@ export default function CartPage() {
                 
                 // Redirect to orders page after 2 seconds
                 setTimeout(() => {
-                    router.push("/orders");
+                    router.push("/user/dashboard/order");
                 }, 2000);
             } else {
                 setOrderMessage({ 
@@ -205,6 +211,79 @@ export default function CartPage() {
         } finally {
             setOrderLoading(false);
         }
+    };
+
+    
+    // Fix the handleBuySingleItem function
+    const handleBuySingleItem = async (item) => {
+        if (!item) return;
+
+        setBuyingSingleItem(prev => ({ ...prev, [item.id]: true }));
+        setOrderMessage(null);
+
+        try {
+            // Use the same API endpoint as wishlist but with different parameters
+            const response = await fetch(`/api/product/order/newOrder?productId=${item.product.id}`, {
+                method: 'POST', // Changed from PUT to POST
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    quantity: item.quantity,
+                    size: item.size || "M",
+                    color: item.color || "BLACK",
+                    customerNote: singleItemNote.trim() || ""
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === "success") {
+                setOrderMessage({ 
+                    type: "success", 
+                    text: `Order placed successfully! Order ID: ${data.order?.id || data.data?.id}`
+                });
+                
+                // Remove the ordered item from cart
+                setCartData(prev => {
+                    if (!prev?.items) return prev;
+                    return {
+                        ...prev,
+                        items: prev.items.filter(cartItem => cartItem.id !== item.id)
+                    };
+                });
+                
+                // Close modal and reset
+                setShowSingleItemModal(false);
+                setSingleItemNote("");
+                setSelectedItem(null);
+                
+                // Redirect to orders page after 2 seconds
+                setTimeout(() => {
+                    router.push("/user/dashboard/order");
+                }, 2000);
+            } else {
+                setOrderMessage({ 
+                    type: "error", 
+                    text: data.msg || "Failed to place order" 
+                });
+                setTimeout(() => setOrderMessage(null), 3000);
+            }
+        } catch (err) {
+            setOrderMessage({ 
+                type: "error", 
+                text: "Network error. Please try again." 
+            });
+            setTimeout(() => setOrderMessage(null), 3000);
+            console.error("Single item order error:", err);
+        } finally {
+            setBuyingSingleItem(prev => ({ ...prev, [item.id]: false }));
+        }
+    };
+    // Open single item buy modal
+    const openSingleItemModal = (item) => {
+        setSelectedItem(item);
+        setShowSingleItemModal(true);
     };
 
     // Check stock availability
@@ -360,25 +439,23 @@ export default function CartPage() {
                 </div>
             )}
 
-            {/* Customer Note Modal */}
+            {/* Customer Note Modal for All Items */}
             {showNoteModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-                    <div className="w-full max-w-md p-6 bg-white rounded-xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="w-full p-6 bg-white shadow-2xl md:w-1/2 rounded-xl" >
                         <h3 className="mb-4 text-xl font-bold" style={{ color: "var(--primary-900)" }}>
-                            Add Order Note
+                            Add Order Note for All Items
                         </h3>
                         <p className="mb-4 text-sm" style={{ color: "var(--primary-600)" }}>
-                            Add special instructions for your order (optional)
+                             📦 Delivery: 3+ items or weight over 1kg may incur additional charges.
+                           
                         </p>
                         <textarea
                             value={customerNote}
                             onChange={(e) => setCustomerNote(e.target.value)}
                             placeholder="e.g., Please deliver after 5 PM, special packaging, etc."
-                            className="w-full p-3 mb-4 border rounded-lg resize-none"
-                            style={{
-                                borderColor: "var(--primary-200)",
-                                minHeight: "100px"
-                            }}
+                            className="w-full p-3 mb-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 text-slate-900"
+                            autoFocus
                         />
                         <div className="flex gap-3">
                             <button
@@ -397,14 +474,128 @@ export default function CartPage() {
                             <button
                                 onClick={handleOrderAll}
                                 disabled={orderLoading}
-                                className="flex-1 py-2 font-medium text-white transition-all rounded-lg"
+                                className="flex-1 py-2 font-medium text-white transition-all rounded-lg hover:shadow-lg disabled:opacity-70"
                                 style={{
-                                    background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
-                                    opacity: orderLoading ? 0.7 : 1
+                                    background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
                                 }}
                             >
-                                {orderLoading ? "Processing..." : "Place Order"}
+                                {orderLoading ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Processing...
+                                    </span>
+                                ) : "Place Order for All Items"}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Single Item Buy Now Modal */}
+            {showSingleItemModal && selectedItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="w-full p-6 bg-white shadow-2xl md:w-1/2 rounded-xl">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold" style={{ color: "var(--primary-900)" }}>
+                                Buy Now: {selectedItem.product.name}
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setShowSingleItemModal(false);
+                                    setSingleItemNote("");
+                                    setSelectedItem(null);
+                                }}
+                                className="p-1 transition-colors rounded-full hover:bg-gray-100"
+                            >
+                                <X size={24} style={{ color: "var(--primary-600)" }} />
+                            </button>
+                        </div>
+                        
+                        {/* Product Info */}
+                        <div className="flex items-start gap-4 p-4 mb-4 rounded-lg" style={{
+                            backgroundColor: "var(--primary-50)",
+                            border: "1px solid var(--primary-200)"
+                        }}>
+                            <img 
+                                src={selectedItem.product.images?.[0]} 
+                                alt={selectedItem.product.name}
+                                className="object-contain w-20 h-20 rounded-lg"
+                            />
+                            <div>
+                                <h4 className="font-bold" style={{ color: "var(--primary-800)" }}>
+                                    {selectedItem.product.name}
+                                </h4>
+                                <p className="mt-1 text-lg font-bold" style={{ color: "var(--accent-600)" }}>
+                                    {formatPrice(selectedItem.product.price - (selectedItem.product.price * (selectedItem.product.discountPercent || 0) / 100))} × {selectedItem.quantity}
+                                </p>
+                                <p className="text-lg font-bold" style={{ color: "var(--primary-900)" }}>
+                                    Total: {formatPrice((selectedItem.product.price - (selectedItem.product.price * (selectedItem.product.discountPercent || 0) / 100)) * selectedItem.quantity)}
+                                </p>
+                                <div className="flex items-center gap-4 mt-2 text-sm" style={{ color: "var(--primary-600)" }}>
+                                    <span>Size: {selectedItem.size}</span>
+                                    <span>Color: {selectedItem.color}</span>
+                                    <span>Qty: {selectedItem.quantity}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Order Note */}
+                        <div className="mb-4">
+                            <label className="block mb-2 font-medium" style={{ color: "var(--primary-700)" }}>
+                                Add Order Note (Optional)
+                            </label>
+                            <textarea
+                                value={singleItemNote}
+                                onChange={(e) => setSingleItemNote(e.target.value)}
+                                placeholder="e.g., Please deliver after 5 PM, special packaging, etc."
+                                className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 text-slate-900"
+                                rows={3}
+                            />
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowSingleItemModal(false);
+                                    setSingleItemNote("");
+                                    setSelectedItem(null);
+                                }}
+                                className="flex-1 py-2 font-medium transition-colors border rounded-lg hover:bg-primary-50"
+                                style={{
+                                    color: "var(--primary-700)",
+                                    borderColor: "var(--primary-300)"
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleBuySingleItem(selectedItem)}
+                                disabled={buyingSingleItem[selectedItem.id]}
+                                className="flex-1 py-2 font-medium text-white transition-all rounded-lg hover:shadow-lg disabled:opacity-70"
+                                style={{
+                                    background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
+                                }}
+                            >
+                                {buyingSingleItem[selectedItem.id] ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Processing...
+                                    </span>
+                                ) : "Place Order for This Item"}
+                            </button>
+                        </div>
+                        
+                        {/* Additional Info */}
+                        <div className="pt-4 mt-4 border-t" style={{ borderColor: "var(--primary-200)" }}>
+                            <div className="flex items-center gap-2 text-sm" style={{ color: "var(--primary-600)" }}>
+                                <Package size={16} />
+                                <span>Cash on Delivery (COD)</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 text-sm" style={{ color: "var(--primary-600)" }}>
+                                <Truck size={16} />
+                                <span>Free shipping on orders over ৳1000</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -465,68 +656,6 @@ export default function CartPage() {
                 <div className="flex flex-col gap-8 lg:grid lg:grid-cols-3 lg:gap-8">
                     {/* Cart Items - 2/3 width */}
                     <div className="lg:col-span-2">
-                        <div className="p-4 mb-6 rounded-xl" style={{
-                            backgroundColor: "var(--accent-50)",
-                            border: "1px solid var(--accent-200)"
-                        }}>
-                            <div className="flex items-center gap-3">
-                                <Package className="w-6 h-6" style={{ color: "var(--accent-600)" }} />
-                                <div>
-                                    <h3 className="font-bold" style={{ color: "var(--accent-800)" }}>
-                                        Free shipping on orders over {formatPrice(1000)}
-                                    </h3>
-                                    <p className="text-sm" style={{ color: "var(--accent-600)" }}>
-                                        You're {formatPrice(Math.max(0, 1000 - totals.subtotal))} away from free shipping!
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Quick Order Button */}
-                        <div className="p-4 mb-6 rounded-xl" style={{
-                            backgroundColor: "white",
-                            border: "2px solid var(--accent-200)",
-                            boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.1)"
-                        }}>
-                            <div className="flex flex-col items-center gap-4 md:flex-row">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center justify-center w-12 h-12 rounded-full" style={{
-                                        backgroundColor: "var(--accent-100)"
-                                    }}>
-                                        <Rocket style={{ color: "var(--accent-600)" }} size={24} />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold" style={{ color: "var(--primary-900)" }}>
-                                            Order All Items at Once
-                                        </h3>
-                                        <p className="text-sm" style={{ color: "var(--primary-600)" }}>
-                                            Skip checkout and order directly
-                                        </p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setShowNoteModal(true)}
-                                    disabled={orderLoading || !stockCheck.allAvailable}
-                                    className="flex items-center gap-2 px-6 py-3 font-bold text-white transition-all duration-300 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                    style={{
-                                        background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
-                                    }}
-                                >
-                                    {orderLoading ? (
-                                        <>
-                                            <div className="w-5 h-5 border-2 border-white rounded-full animate-spin border-t-transparent"></div>
-                                            Processing...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ShoppingBag size={20} />
-                                            Order All Items
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
                         <div className="space-y-4">
                             {cartData.items.map((item) => {
                                 const itemPrice = item.product.price;
@@ -699,8 +828,21 @@ export default function CartPage() {
                                                             </div>
                                                         </div>
 
-                                                        {/* Remove button */}
-                                                        <div className="flex gap-3">
+                                                        {/* Action buttons */}
+                                                        <div className="flex flex-wrap gap-3">
+                                                            {/* Buy Now button */}
+                                                            <button
+                                                                onClick={() => openSingleItemModal(item)}
+                                                                disabled={isOutOfStock}
+                                                                className="px-4 py-2 font-medium text-white transition-all rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                style={{
+                                                                    background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
+                                                                }}
+                                                            >
+                                                                ⚡ Buy Now
+                                                            </button>
+                                                            
+                                                            {/* Remove button */}
                                                             <button
                                                                 onClick={() => removeItem(item.id)}
                                                                 disabled={removingItems[item.id]}
@@ -714,6 +856,8 @@ export default function CartPage() {
                                                                 )}
                                                                 Remove
                                                             </button>
+                                                            
+                                                            {/* View Details button */}
                                                             <button
                                                                 onClick={() => router.push(`/pages/product/detail/${item.product.id}`)}
                                                                 className="px-4 py-2 font-medium transition-colors border rounded-lg hover:bg-primary-50"
@@ -815,27 +959,8 @@ export default function CartPage() {
                                 <div className="relative mb-4">
                                     <div className="absolute inset-0 flex items-center">
                                         <div className="w-full border-t" style={{ borderColor: "var(--primary-200)" }}></div>
-                                    </div>
-                                    <div className="relative flex justify-center text-sm">
-                                        <span className="px-2 bg-white" style={{ color: "var(--primary-500)" }}>
-                                            OR
-                                        </span>
-                                    </div>
+                                    </div> 
                                 </div>
-
-                                {/* Regular Checkout Button */}
-                                <button
-                                    onClick={() => router.push("/checkout")}
-                                    className="w-full py-3 mb-4 font-bold text-white transition-all duration-300 rounded-lg hover:shadow-lg"
-                                    style={{
-                                        background: "linear-gradient(to right, var(--primary-500), var(--primary-600))"
-                                    }}
-                                >
-                                    <div className="flex items-center justify-center gap-2">
-                                        <CreditCard size={20} />
-                                        Proceed to Checkout
-                                    </div>
-                                </button>
 
                                 {/* Quick Order Info */}
                                 <div className="p-4 mb-4 rounded-lg" style={{
@@ -846,10 +971,12 @@ export default function CartPage() {
                                         <Rocket className="flex-shrink-0 mt-0.5" style={{ color: "var(--accent-600)" }} size={16} />
                                         <div>
                                             <h4 className="text-sm font-bold" style={{ color: "var(--accent-800)" }}>
-                                                Order All Items
+                                                Quick Options
                                             </h4>
                                             <p className="text-xs mt-0.5" style={{ color: "var(--accent-600)" }}>
-                                                Skip checkout. Use your default address. Fastest way to order.
+                                                • Order All: Place order for all items
+                                                <br/>
+                                                • Buy Now: Place order for individual items
                                             </p>
                                         </div>
                                     </div>
