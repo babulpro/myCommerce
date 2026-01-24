@@ -13,7 +13,7 @@ export default function CategoryPage() {
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState("all");
   const [sortBy, setSortBy] = useState("featured");
-  const [priceRange, setPriceRange] = useState([0, 5000]);
+  const [priceRange, setPriceRange] = useState([0, 500000]);
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
@@ -301,7 +301,7 @@ export default function CategoryPage() {
     setSelectedType("all");
     setSelectedColors([]);
     setSelectedSizes([]);
-    setPriceRange([0, 5000]);
+    setPriceRange([0, 500000]);
     setSortBy("featured");
   }, []);
 
@@ -383,7 +383,7 @@ export default function CategoryPage() {
               ) : (
                 <>
                   <span>🔍</span>
-                  <span>Filters ({selectedColors.length + selectedSizes.length + (selectedType !== "all" ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 5000 ? 1 : 0)})</span>
+                  <span>Filters ({selectedColors.length + selectedSizes.length + (selectedType !== "all" ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 500000 ? 1 : 0)})</span>
                 </>
               )}
             </button>
@@ -504,7 +504,7 @@ export default function CategoryPage() {
                       <input
                         type="number"
                         value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 5000])}
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 500000])}
                         className="w-1/2 px-4 py-2 border-2 rounded-lg"
                         style={{
                           borderColor: "var(--primary-200)",
@@ -673,7 +673,7 @@ export default function CategoryPage() {
                     <input
                       type="number"
                       value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 5000])}
+                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 500000])}
                       className="w-1/2 px-4 py-2 border-2 rounded-lg"
                       style={{
                         borderColor: "var(--primary-200)",
@@ -872,7 +872,7 @@ export default function CategoryPage() {
                       (Wishlist saved locally)
                     </span>
                   )}
-                  {(selectedType !== "all" || selectedColors.length > 0 || selectedSizes.length > 0 || priceRange[0] > 0 || priceRange[1] < 5000) && (
+                  {(selectedType !== "all" || selectedColors.length > 0 || selectedSizes.length > 0 || priceRange[0] > 0 || priceRange[1] < 500000) && (
                     <button 
                       onClick={clearFilters}
                       className="hidden px-3 py-1 ml-4 text-sm font-medium transition-colors rounded-lg lg:inline-block"
@@ -949,7 +949,7 @@ export default function CategoryPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:gap-8">
                 {filteredProducts.map((product) => {
                   const discountedPrice = calculateDiscountedPrice(product.price, product.discountPercent);
                   const isDiscounted = product.discountPercent > 0;
@@ -969,51 +969,51 @@ export default function CategoryPage() {
                     }}
                     >
                       {/* Product Image with Wishlist Icon */}
-                      <div className="relative">
+                       <div className="relative">
                         <Link key={product.name} href={`/pages/product/detail/${product.id}`} className="block">
-                          <div className="relative h-56 overflow-hidden lg:h-72" style={{
+                          <div className="relative overflow-hidden h-44 lg:h-72" style={{
                             background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
                           }}>
                             <img 
                               src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
                               alt={product.name}
-                              className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                              className="object-cover w-full h-full pt-2 transition-transform duration-700 lg:pt-0 group-hover:scale-110"
                             />
                             
                             {/* Enhanced Wishlist Icon */}
                             <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                toggleWishlist(product.id, product.name);
-                              }}
-                              disabled={isLoading}
-                              className="absolute z-10 flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 opacity-0 top-3 right-3 group-hover:opacity-100 hover:scale-110 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-                            >
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg"
-                                style={{
-                                  backgroundColor: 'white',
-                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                                }}>
-                                {isLoading ? (
-                                  <span className="text-xs">⏳</span>
-                                ) : (
-                                  <span className={`text-xl transition-all duration-300 ${inWishlist ? 'scale-125' : ''}`}
-                                    style={{
-                                      color: inWishlist ? 'var(--error-500)' : 'var(--primary-500)'
-                                    }}>
-                                    {inWishlist ? '❤️' : '🤍'}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="mt-1 text-xs font-medium whitespace-nowrap text-slate-700"
-                                style={{
-                                  textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                                }}>
-                                {isLoading ? 'Updating...' : (inWishlist ? 'Added' : 'Wishlist')}
-                              </span>
-                            </button>
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleWishlist(product.id, product.name);
+                                }} 
+                                disabled={isLoading}
+                                className="absolute z-10 flex flex-col items-center justify-center w-12 h-12 transition-all duration-300 opacity-100 lg:opacity-0 top-3 right-3 lg:group-hover:opacity-100 hover:scale-110 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+                              >
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg"
+                                  style={{
+                                    backgroundColor: 'white',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                  }}>
+                                  {isLoading ? (
+                                    <span className="text-xs">⏳</span>
+                                  ) : (
+                                    <span className={`text-xl transition-all duration-300 ${inWishlist ? 'scale-125' : ''}`}
+                                      style={{
+                                        color: inWishlist ? 'var(--error-500)' : 'var(--primary-500)'
+                                      }}>
+                                      {inWishlist ? '❤️' : '🤍'}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="mt-1 text-xs font-medium whitespace-nowrap text-slate-700"
+                                  style={{
+                                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                                  }}>
+                                  {isLoading ? 'Updating...' : (inWishlist ? 'Added' : 'Wishlist')}
+                                </span>
+                              </button>
                             
                             {/* Badges */}
                             <div className="absolute flex flex-col gap-2 top-3 lg:top-4 left-3 lg:left-4">
@@ -1044,6 +1044,7 @@ export default function CategoryPage() {
                           </div>                      
                         </Link>
                       </div>
+
 
                       {/* Product Info */}
                       <div className="p-4 lg:p-6">

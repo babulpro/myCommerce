@@ -865,7 +865,7 @@ export default function WishlistPage() {
               </div>
               <div className="flex gap-2 md:ml-auto">
                 <Link
-                  href="/login"
+                  href="/user/dashboard/login"
                   className="px-6 py-3 font-bold text-white transition-all rounded-lg hover:shadow-lg"
                   style={{
                     background: "linear-gradient(to right, var(--accent-500), var(--accent-600))"
@@ -913,7 +913,7 @@ export default function WishlistPage() {
               </Link>
               {!isLoggedIn && (
                 <Link
-                  href="/login"
+                  href="/user/dashboard/login"
                   className="px-8 py-4 font-bold transition-colors border rounded-lg hover:bg-primary-50"
                   style={{
                     color: "var(--primary-700)",

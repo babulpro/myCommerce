@@ -9,7 +9,7 @@ export default function ProductsGrid() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedType, setSelectedType] = useState("all");
   const [sortBy, setSortBy] = useState("featured");
-  const [priceRange, setPriceRange] = useState([0, 5000000]);
+  const [priceRange, setPriceRange] = useState([0, 500000]);
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
@@ -178,9 +178,8 @@ export default function ProductsGrid() {
         setWishlist(prev => [...new Set([...prev, ...newProductIds])]);
         
         // Reload server wishlist to confirm
-        setTimeout(async () => {
-          await loadServerWishlist();
-        }, 500);
+         
+            loadServerWishlist(); 
       }
       
     } catch (error) {
@@ -403,7 +402,7 @@ export default function ProductsGrid() {
     setSelectedType("all");
     setSelectedColors([]);
     setSelectedSizes([]);
-    setPriceRange([0, 5000]);
+    setPriceRange([0, 500000]);
     setSortBy("featured");
   }, []);
 
@@ -485,7 +484,7 @@ export default function ProductsGrid() {
               ) : (
                 <>
                   <span>🔍</span>
-                  <span>Filters ({selectedColors.length + selectedSizes.length + (selectedType !== "all" ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 5000 ? 1 : 0)})</span>
+                  <span>Filters ({selectedColors.length + selectedSizes.length + (selectedType !== "all" ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 500000 ? 1 : 0)})</span>
                 </>
               )
               }
@@ -607,7 +606,7 @@ export default function ProductsGrid() {
                       <input
                         type="number"
                         value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 5000])}
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 500000])}
                         className="w-1/2 px-4 py-2 border-2 rounded-lg"
                         style={{
                           borderColor: "var(--primary-200)",
@@ -776,7 +775,7 @@ export default function ProductsGrid() {
                     <input
                       type="number"
                       value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 5000])}
+                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 500000])}
                       className="w-1/2 px-4 py-2 border-2 rounded-lg"
                       style={{
                         borderColor: "var(--primary-200)",
@@ -947,7 +946,7 @@ export default function ProductsGrid() {
                       (Wishlist saved locally)
                     </span>
                   )}
-                  {(selectedType !== "all" || selectedColors.length > 0 || selectedSizes.length > 0 || priceRange[0] > 0 || priceRange[1] < 5000) && (
+                  {(selectedType !== "all" || selectedColors.length > 0 || selectedSizes.length > 0 || priceRange[0] > 0 || priceRange[1] < 500000) && (
                     <button 
                       onClick={clearFilters}
                       className="hidden px-3 py-1 ml-4 text-sm font-medium transition-colors rounded-lg lg:inline-block"
@@ -1024,7 +1023,7 @@ export default function ProductsGrid() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:gap-8">
                 {filteredProducts.map((product) => {
                   const discountedPrice = calculateDiscountedPrice(product.price, product.discountPercent);
                   const isDiscounted = product.discountPercent > 0;
@@ -1046,13 +1045,13 @@ export default function ProductsGrid() {
                       {/* Product Image with Wishlist Icon */}
                       <div className="relative">
                         <Link key={product.name} href={`/pages/product/detail/${product.id}`} className="block">
-                          <div className="relative h-56 overflow-hidden lg:h-72" style={{
+                          <div className="relative overflow-hidden h-44 lg:h-72" style={{
                             background: "linear-gradient(to bottom right, var(--primary-25), var(--primary-50))"
                           }}>
                             <img 
                               src={product.images?.[0] || "https://via.placeholder.com/300x300"} 
                               alt={product.name}
-                              className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                              className="object-cover w-full h-full pt-2 transition-transform duration-700 lg:pt-0 group-hover:scale-110"
                             />
                             
                             {/* Enhanced Wishlist Icon */}
