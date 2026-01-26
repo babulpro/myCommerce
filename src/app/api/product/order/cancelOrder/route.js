@@ -3,8 +3,9 @@ import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export async function PATCH(req) {
-    try {
+ 
+export async function DELETE(req) {
+     try {
         // Authentication
         const cookieStore = await cookies();
         const token = cookieStore.get('token')?.value;
@@ -278,78 +279,6 @@ export async function PATCH(req) {
 
         return NextResponse.json(
             { status: "fail", message: "Failed to cancel order. Please try again." },
-            { status: 500 }
-        );
-    }
-}
-
-// Optional: DELETE endpoint for order cancellation (alternative approach)
-
-export async function DELETE(req) {
-    try {
-        // Authentication (same as above)
-        const cookieStore = await cookies();
-        const token = cookieStore.get('token')?.value;
-        
-        if (!token) {
-            return NextResponse.json(
-                { status: "fail", message: "Please login to cancel order" },
-                { status: 401 }
-            );
-        }
-
-        const payload = await DecodedJwtToken(token);
-        const userId = payload.id;
-        
-        if (!userId) {
-            return NextResponse.json(
-                { status: "fail", message: "Invalid user session" },
-                { status: 401 }
-            );
-        }
-
-        // Get order ID from query parameters
-        const { searchParams } = new URL(req.url);
-        const orderId = searchParams.get('orderId');
-        
-        if (!orderId) {
-            return NextResponse.json(
-                { status: "fail", message: "Order ID is required" },
-                { status: 400 }
-            );
-        }
-
-    
-        // For DELETE, you might want to check if order exists and user has permission
-        const order = await prisma.order.findUnique({
-            where: { id: orderId },
-            select: { id: true, userId: true, status: true }
-        });
-
-        if (!order) {
-            return NextResponse.json(
-                { status: "fail", message: "Order not found" },
-                { status: 404 }
-            );
-        }
-
-        if (order.userId !== userId) {
-            return NextResponse.json(
-                { status: "fail", message: "Unauthorized" },
-                { status: 403 }
-            );
-        }
-
-        // You can redirect to PATCH or implement similar logic
-        return NextResponse.json({
-            status: "fail",
-            message: "Please use PATCH method to cancel orders"
-        }, { status: 405 });
-
-    } catch (error) {
-        console.error("DELETE order error:", error);
-        return NextResponse.json(
-            { status: "fail", message: "Internal server error" },
             { status: 500 }
         );
     }

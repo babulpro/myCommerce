@@ -309,9 +309,12 @@ const syncLocalToServer = async (serverWishlist) => {
             });
 
             const result = await response.json();
+            if(response.status === 400 && result.case === "no-address") {
+                router.push('/user/dashboard/address');
+            }
             
             if (result.status === "success") {
-                alert(`✅ Order placed successfully!\nOrder ID: ${result.order.id}\nTotal: ${result.order.totalAmount}\n\nCash on delivery will be collected upon delivery.`);
+                alert(`✅ Order placed successfully! \n\nCash on delivery will be collected upon delivery.`);
                 router.push(`/user/dashboard/order`);
             } else {
                 alert(`❌ ${result.msg || "Failed to place order"}`);

@@ -92,6 +92,7 @@ export default function AddressPage() {
                 alert(data.msg || "Address saved successfully!")
                 await fetchAddress() // Refresh the address data
                 setIsEditing(false) // Switch back to view mode
+                router.back();
             }
 
         } catch (error) {

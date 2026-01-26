@@ -452,78 +452,94 @@ export default function ProductsGrid() {
     <div className="min-h-screen" style={{
       background: "linear-gradient(to bottom, var(--primary-25), white)"
     }}>
-      {/* Mobile Filter Button */}
-      <div className="sticky top-0 z-40 p-4 lg:hidden" style={{
-        backgroundColor: "white",
-        borderBottom: "1px solid var(--primary-100)",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-      }}>
-        <div className="container mx-auto">
-          <div className="flex items-center justify-between">
-            <button
-              id="filters-button"
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 font-medium transition-all duration-300 rounded-lg"
-              style={{
-                background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
-                color: "white",
-                boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 6px 12px -2px rgba(14, 165, 233, 0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(14, 165, 233, 0.2)";
-              }}
-            >
-              {showFilters ? (
-                <>
-                  <span>✕</span>
-                  <span>Close Filters</span>
-                </>
-              ) : (
-                <>
-                  <span>🔍</span>
-                  <span>Filters ({selectedColors.length + selectedSizes.length + (selectedType !== "all" ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 500000 ? 1 : 0)})</span>
-                </>
-              )
-              }
-            </button>
-            
-            <div className="flex items-center gap-4">
-              <div className="text-sm font-medium" style={{ color: "var(--primary-700)" }}>
-                {filteredProducts.length} products
-              </div>
-              <Link 
-                href="/pages/wishlist" 
-                className="relative p-2 transition-all duration-300 rounded-lg hover:bg-gray-50"
-                title="View Wishlist"
-              >
-                <span className="text-lg">❤️</span>
-                {wishlist.length > 0 && (
-                  <span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full -top-1 -right-1"
-                    style={{
-                      backgroundColor: 'var(--accent-500)',
-                      color: 'white'
-                    }}>
-                    {wishlist.length}
-                  </span>
-                )}
-              </Link>
-            </div>
-          </div>
+     {/* Mobile Filter Button */}
+<div className="z-40 p-4 lg:hidden" style={{
+  backgroundColor: "white",
+  borderBottom: "1px solid var(--primary-100)",
+  boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+}}>
+  <div className="container mx-auto">
+    <div className="flex items-center justify-between gap-2">
+      <button
+        id="filters-button"
+        onClick={() => setShowFilters(!showFilters)}
+        className="flex items-center gap-2 px-4 py-2 font-medium transition-all duration-300 rounded-lg"
+        style={{
+          background: "linear-gradient(to right, var(--accent-500), var(--accent-600))",
+          color: "white",
+          boxShadow: "0 4px 6px -1px rgba(14, 165, 233, 0.2)"
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = "0 6px 12px -2px rgba(14, 165, 233, 0.3)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(14, 165, 233, 0.2)";
+        }}
+      >
+        {showFilters ? (
+          <>
+            <span>✕</span>
+            <span>Close Filters</span>
+          </>
+        ) : (
+          <>
+            <span>🔍</span>
+            <span>Filters ({selectedColors.length + selectedSizes.length + (selectedType !== "all" ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 500000 ? 1 : 0)})</span>
+          </>
+        )}
+      </button>
+      
+      <div className="flex items-center gap-2">
+        {/* Mobile Sort Dropdown */}
+        <select 
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="px-3 py-2 text-sm font-medium border-2 rounded-lg"
+          style={{
+            borderColor: "var(--primary-200)",
+            backgroundColor: "white",
+            color: "var(--primary-800)",
+            minWidth: "130px"
+          }}
+        >
+          <option value="featured">✨ Featured</option>
+          <option value="price-low-high">💰 Low to High</option>
+          <option value="price-high-low">💰 High to Low</option>
+          <option value="name-asc">🔤 A to Z</option>
+          <option value="name-desc">🔤 Z to A</option>
+          <option value="discount">🏷️ Best Discount</option>
+        </select>
+        
+        {/* Product count */}
+        <div className="hidden text-sm font-medium xs:block" style={{ color: "var(--primary-700)" }}>
+          {filteredProducts.length} items
         </div>
       </div>
+    </div>
+  </div>
+</div>
 
       {/* Mobile Filters Overlay */}
       {showFilters && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 bg-black bg-opacity-50 lg:hidden">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 lg:hidden">
+          {/* Semi-transparent background - products will be visible behind */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.2)", // Lower opacity: 20% instead of 50%
+              backdropFilter: "blur(1px)" // Optional: subtle blur effect
+            }}
+            onClick={() => setShowFilters(false)} // Close when clicking outside
+          />
+          
+          {/* Filters Panel */}
           <div 
             id="filters-panel"
-            className="w-full max-w-md mx-4 rounded-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
+            className="relative w-full max-w-md mx-4 rounded-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
             style={{
               backgroundColor: "white",
-              border: "1px solid var(--primary-100)"
+              border: "1px solid var(--primary-100)",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)" // Stronger shadow for better contrast
             }}
           >
             <div className="p-6">
@@ -930,8 +946,8 @@ export default function ProductsGrid() {
 
           {/* Main Content */}
           <div className="lg:w-3/4">
-            {/* Sorting Bar - Updated with login status indicator */}
-            <div className="p-4 mb-8 shadow-lg rounded-2xl lg:p-6" style={{
+           {/* Sorting Bar - Updated with login status indicator */}
+            <div className="hidden p-4 mb-8 shadow-lg lg:block rounded-2xl lg:p-6" style={{  // Added 'hidden lg:block'
               backgroundColor: "white",
               border: "1px solid var(--primary-100)"
             }}>
@@ -966,7 +982,7 @@ export default function ProductsGrid() {
                   <select 
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="px-4 py-2.5 border-2 rounded-xl font-medium w-full sm:w-auto min-w-[180px]"
+                    className="hidden px-4 py-2.5 border-2 rounded-xl font-medium sm:block w-full sm:w-auto min-w-[180px]"  // Added 'hidden sm:block'
                     style={{
                       borderColor: "var(--primary-200)",
                       backgroundColor: "white",
@@ -1085,7 +1101,7 @@ export default function ProductsGrid() {
                                   style={{
                                     textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                                   }}>
-                                  {isLoading ? 'Updating...' : (inWishlist ? 'Added' : 'Wishlist')}
+                                  {isLoading ? 'Updating...' : ""}
                                 </span>
                               </button>
                             
@@ -1200,7 +1216,7 @@ export default function ProductsGrid() {
                               e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(14, 165, 233, 0.2)";
                             }}
                           >
-                            🛒 Add
+                            <span className="hidden lg:inline-block">🛒</span> Add
                           </button>
                           <button className="px-4 py-2 text-sm font-medium transition-all duration-300 border-2 rounded-lg lg:px-6 lg:py-3 lg:rounded-xl lg:text-base"
                             style={{
@@ -1218,7 +1234,7 @@ export default function ProductsGrid() {
                               e.currentTarget.style.color = "var(--primary-700)";
                             }}
                           >
-                            <Link key={product.name} href={`/pages/product/detail/${product.id}`}>👁️ View</Link>
+                            <Link key={product.name} href={`/pages/product/detail/${product.id}`}><span className="hidden lg:inline-block">👁️</span> View</Link>
                           </button>
                         </div>
                       </div>

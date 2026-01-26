@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Page() {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
-  
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   const [data, setData] = useState({
     name: "",
@@ -17,8 +18,8 @@ export default function Page() {
     rating: 0,
     reviewCount: 0,
     tags: "",
-    size: "",
-    color: "",
+    size: "", // Optional - leave empty if not applicable
+    color: "", // Optional - leave empty if not applicable
     type: "",
     brand: "",
     currency: "BDT",
@@ -29,6 +30,39 @@ export default function Page() {
   });
 
   const [imageFiles, setImageFiles] = useState(Array(5).fill(null));
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("/api/category/getCategory");
+        if (response.ok) {
+          const result = await response.json();
+          // Handle different response structures
+          if (Array.isArray(result)) {
+            setCategories(result);
+          } else if (result.categories && Array.isArray(result.categories)) {
+            setCategories(result.categories);
+          } else if (result.data && Array.isArray(result.data)) {
+            setCategories(result.data);
+          } else {
+            console.error("Unexpected response structure:", result);
+            setCategories([]);
+          }
+        } else {
+          console.error("Failed to fetch categories");
+          setCategories([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+        setCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const InputChange = (name, value) => {
     let processedValue = value;
@@ -85,14 +119,14 @@ export default function Page() {
 
     try {
       const validFiles = imageFiles.filter((f) => f !== null);
-      if (validFiles.length < 4) {
+      if (validFiles.length < 3) {
         alert("Please upload at least 4 images.");
         return setUploading(false);
       }
 
       const imageUrls = await uploadImages(validFiles);
 
-      if (imageUrls.length < 4) {
+      if (imageUrls.length < 3) {
         alert("Some images failed to upload. Try again.");
         return setUploading(false);
       }
@@ -108,19 +142,19 @@ export default function Page() {
         featured: data.featured === true || data.featured === "true",
         rating: parseFloat(data.rating) || 0,
         reviewCount: parseInt(data.reviewCount) || 0,
-        tags: data.tags ? data.tags.split(",").map(tag => tag.trim()) : [],
-        size: data.size ? data.size.split(",").map(s => s.trim()) : [],
-        color: data.color ? data.color.split(",").map(c => c.trim()) : [],
+        tags: data.tags ? data.tags.split(",").map(tag => tag.trim()).filter(tag => tag !== "") : [],
+        size: data.size ? data.size.split(",").map(s => s.trim()).filter(s => s !== "") : [],
+        color: data.color ? data.color.split(",").map(c => c.trim()).filter(c => c !== "") : [],
         type: data.type,
         discountPercent: parseFloat(data.discountPercent) || 0,
         compareAtPrice: data.compareAtPrice ? parseFloat(data.compareAtPrice) : null,
         categoryId: data.categoryId,
-        char: data.char ? data.char.split(",").map(item => item.trim()) : [],
+        char: data.char ? data.char.split(",").map(item => item.trim()).filter(item => item !== "") : [],
       };
 
       console.log("Submitting payload:", payload);
 
-      const response = await fetch("/api/secrect/upload", {
+      const response = await fetch("/api/admin/product/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -148,8 +182,6 @@ export default function Page() {
       setUploading(false);
     }
   };
-
-
 
   return (
     <div className="min-h-screen p-6" style={{
@@ -245,17 +277,16 @@ export default function Page() {
             required
           />
           <p className="mb-6 text-sm" style={{ color: "var(--primary-500)" }}>
-            Each comma-separated item will become a separate characteristic
+            Each comma-separated item will become a separate characteristic. Leave empty if not applicable.
           </p>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-                Price *
+                Price (BDT) *
               </label>
               <input
-                type="number"
-                step="0.01"
+                type="text" 
                 value={data.price}
                 onChange={(e) => InputChange("price", e.target.value)}
                 className="w-full px-4 py-3 transition-all duration-200 border-2 rounded-xl focus:ring-2"
@@ -279,11 +310,10 @@ export default function Page() {
 
             <div>
               <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-                Compare At Price
+                Compare At Price (Optional)
               </label>
               <input
-                type="number"
-                step="0.01"
+                type="text" 
                 value={data.compareAtPrice}
                 onChange={(e) => InputChange("compareAtPrice", e.target.value)}
                 className="w-full px-4 py-3 transition-all duration-200 border-2 rounded-xl focus:ring-2"
@@ -300,18 +330,21 @@ export default function Page() {
                   e.target.style.borderColor = "var(--primary-200)";
                   e.target.style.boxShadow = "none";
                 }}
-                placeholder="Original price"
+                placeholder="Original price (for discount display)"
               />
+              <p className="mt-1 text-xs text-primary-500">
+                Leave empty if no discount
+              </p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-                Inventory *
+                Inventory (Stock) *
               </label>
               <input
-                type="number"
+                type="text"
                 value={data.inventory}
                 onChange={(e) => InputChange("inventory", e.target.value)}
                 className="w-full px-4 py-3 transition-all duration-200 border-2 rounded-xl focus:ring-2"
@@ -328,18 +361,17 @@ export default function Page() {
                   e.target.style.borderColor = "var(--primary-200)";
                   e.target.style.boxShadow = "none";
                 }}
-                placeholder="Quantity"
+                placeholder="Quantity in stock"
                 required
               />
             </div>
 
             <div>
               <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-                Discount Percent
+                Discount Percent (Optional)
               </label>
               <input
-                type="number"
-                step="0.1"
+                type="text"
                 value={data.discountPercent}
                 onChange={(e) => InputChange("discountPercent", e.target.value)}
                 className="w-full px-4 py-3 transition-all duration-200 border-2 rounded-xl focus:ring-2"
@@ -356,8 +388,11 @@ export default function Page() {
                   e.target.style.borderColor = "var(--primary-200)";
                   e.target.style.boxShadow = "none";
                 }}
-                placeholder="0.0"
+                placeholder="0.0 (e.g., 10 for 10% off)"
               />
+              <p className="mt-1 text-xs text-primary-500">
+                0-100 only. Leave 0 if no discount
+              </p>
             </div>
           </div>
 
@@ -391,7 +426,7 @@ export default function Page() {
 
             <div>
               <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-                Type *
+                Type / Category *
               </label>
               <input
                 type="text"
@@ -411,7 +446,7 @@ export default function Page() {
                   e.target.style.borderColor = "var(--primary-200)";
                   e.target.style.boxShadow = "none";
                 }}
-                placeholder="Product type"
+                placeholder="e.g., Smartphone, Laptop, Clothing"
                 required
               />
             </div>
@@ -420,13 +455,10 @@ export default function Page() {
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-                Rating
+                Rating (Optional)
               </label>
               <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="5"
+                type="text"
                 value={data.rating}
                 onChange={(e) => InputChange("rating", e.target.value)}
                 className="w-full px-4 py-3 transition-all duration-200 border-2 rounded-xl focus:ring-2"
@@ -443,16 +475,19 @@ export default function Page() {
                   e.target.style.borderColor = "var(--primary-200)";
                   e.target.style.boxShadow = "none";
                 }}
-                placeholder="0-5"
+                placeholder="0-5 (e.g., 4.5)"
               />
+              <p className="mt-1 text-xs text-primary-500">
+                Leave 0 for new products
+              </p>
             </div>
 
             <div>
               <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-                Review Count
+                Review Count (Optional)
               </label>
               <input
-                type="number"
+                type="text"
                 value={data.reviewCount}
                 onChange={(e) => InputChange("reviewCount", e.target.value)}
                 className="w-full px-4 py-3 transition-all duration-200 border-2 rounded-xl focus:ring-2"
@@ -471,11 +506,14 @@ export default function Page() {
                 }}
                 placeholder="Number of reviews"
               />
+              <p className="mt-1 text-xs text-primary-500">
+                Leave 0 for new products
+              </p>
             </div>
           </div>
 
           <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-            Tags (comma-separated)
+            Tags (Optional, comma-separated)
           </label>
           <input
             type="text"
@@ -495,13 +533,16 @@ export default function Page() {
               e.target.style.borderColor = "var(--primary-200)";
               e.target.style.boxShadow = "none";
             }}
-            placeholder="tag1, tag2, tag3"
+            placeholder="e.g., smartphone, android, 5g, budget"
           />
+          <p className="mt-1 mb-6 text-xs text-primary-500">
+            Useful for search and filtering. Leave empty if not needed.
+          </p>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-                Sizes (comma-separated)
+                Sizes (Optional, comma-separated)
               </label>
               <input
                 type="text"
@@ -521,13 +562,16 @@ export default function Page() {
                   e.target.style.borderColor = "var(--primary-200)";
                   e.target.style.boxShadow = "none";
                 }}
-                placeholder="S, M, L, XL"
+                placeholder="e.g., S, M, L, XL"
               />
+              <p className="mt-1 text-xs text-primary-500">
+                For clothing, shoes, etc. Leave empty if not applicable.
+              </p>
             </div>
 
             <div>
               <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-                Colors (comma-separated)
+                Colors (Optional, comma-separated)
               </label>
               <input
                 type="text"
@@ -547,8 +591,11 @@ export default function Page() {
                   e.target.style.borderColor = "var(--primary-200)";
                   e.target.style.boxShadow = "none";
                 }}
-                placeholder="Red, Blue, Green"
+                placeholder="e.g., Red, Blue, Black"
               />
+              <p className="mt-1 text-xs text-primary-500">
+                Available colors. Leave empty if single color or not applicable.
+              </p>
             </div>
           </div>
 
@@ -575,10 +622,10 @@ export default function Page() {
                   e.target.style.boxShadow = "none";
                 }}
               >
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="BDT">BDT</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="BDT">BDT (৳)</option>
               </select>
             </div>
 
@@ -605,42 +652,85 @@ export default function Page() {
                 }}
               >
                 <option value="false">No</option>
-                <option value="true">Yes</option>
+                <option value="true">Yes (Show on homepage)</option>
               </select>
             </div>
           </div>
 
           <label className="block mb-2 font-semibold" style={{ color: "var(--primary-700)" }}>
-            Category ID *
+            Category *
           </label>
-          <input
-            type="text"
-            value={data.categoryId}
-            onChange={(e) => InputChange("categoryId", e.target.value)}
-            className="w-full px-4 py-3 mb-6 transition-all duration-200 border-2 rounded-xl focus:ring-2"
-            style={{
-              backgroundColor: "white",
-              borderColor: "var(--primary-200)",
-              color: "var(--primary-800)"
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = "var(--accent-400)";
-              e.target.style.boxShadow = "0 0 0 2px var(--accent-400)";
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = "var(--primary-200)";
-              e.target.style.boxShadow = "none";
-            }}
-            placeholder="Enter category ObjectId"
-            required
-          />
+          
+          {loadingCategories ? (
+            <div className="mb-6">
+              <div className="w-full px-4 py-3 transition-all duration-200 border-2 rounded-xl" style={{
+                backgroundColor: "white",
+                borderColor: "var(--primary-200)",
+                color: "var(--primary-800)"
+              }}>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 mr-2 border-2 rounded-full border-primary-400 border-t-transparent animate-spin"></div>
+                  Loading categories...
+                </div>
+              </div>
+            </div>
+          ) : !Array.isArray(categories) || categories.length === 0 ? (
+            <div className="mb-6">
+              <div className="w-full px-4 py-3 text-center transition-all duration-200 border-2 rounded-xl" style={{
+                backgroundColor: "white",
+                borderColor: "var(--primary-200)",
+                color: "var(--primary-600)"
+              }}>
+                No categories found. Please create categories first.
+              </div>
+            </div>
+          ) : (
+            <select
+              value={data.categoryId}
+              onChange={(e) => InputChange("categoryId", e.target.value)}
+              className="w-full px-4 py-3 mb-6 transition-all duration-200 border-2 rounded-xl focus:ring-2"
+              style={{
+                backgroundColor: "white",
+                borderColor: "var(--primary-200)",
+                color: "var(--primary-800)"
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = "var(--accent-400)";
+                e.target.style.boxShadow = "0 0 0 2px var(--accent-400)";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "var(--primary-200)";
+                e.target.style.boxShadow = "none";
+              }}
+              required
+            >
+              <option value="">Select a category *</option>
+              {categories.map((category) => (
+                <option key={category._id || category.id} value={category._id || category.id}>
+                  {category.name || "Unnamed Category"}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {data.categoryId && (
+            <p className="mb-6 text-sm" style={{ color: "var(--primary-500)" }}>
+              Selected Category ID: <span className="font-mono">{data.categoryId}</span>
+            </p>
+          )}
 
           <h3 className="mt-8 mb-4 text-lg font-bold" style={{ color: "var(--primary-800)" }}>
             Upload Images (4–5 images required)
           </h3>
+          <p className="mb-4 text-sm text-primary-600">
+            Upload at least 4 images. First image will be the main product image.
+          </p>
 
           {imageFiles.map((file, idx) => (
             <div key={idx} className="mb-4">
+              <label className="block mb-1 text-sm font-medium" style={{ color: "var(--primary-700)" }}>
+                Image {idx + 1} {idx === 0 && "(Main Image)"}
+              </label>
               <input
                 type="file"
                 accept="image/*"
@@ -662,7 +752,7 @@ export default function Page() {
               />
               {file && (
                 <p className="mt-1 text-sm font-medium" style={{ color: "var(--accent-600)" }}>
-                  ✅ {file.name}
+                  ✅ {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
                 </p>
               )}
             </div>

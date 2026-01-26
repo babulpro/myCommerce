@@ -124,49 +124,47 @@ export default function OrdersPage() {
     return step || { status, label: status, progress: 0 };
   };
 
-  const cancelOrder = async (orderId) => {
-    if (!confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
-      return;
-    }
+ const cancelOrder = async (orderId) => {
+  if (!confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
+    return;
+  }
 
-    setCancellingOrder(orderId);
-    try {
-      const response = await fetch(`/api/product/order/newOrder`, {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify({ 
-          orderId, 
-          status: "CANCELLED",
-          cancellationReason: "Cancelled by customer" 
-        })
-      });
+  setCancellingOrder(orderId);
+  try {
+    // Note: orderId is passed as query parameter, not in body
+    const response = await fetch(`/api/product/order/cancelOrder?orderId=${orderId}`, {
+      method: 'DELETE',
+      headers: { 
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ 
+        reason: "Cancelled by customer" // Optional cancellation reason
+      })
+    });
 
-      const data = await response.json();
+    const data = await response.json();
+    
+    if (data.status === "success") {
+      // Update the order in state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId  // Use order.id (not order._id)
+            ? { ...order, status: "CANCELLED" }
+            : order
+        )
+      );
       
-      if (data.status === "success") {
-        // Update the order in state
-        setOrders(prevOrders => 
-          prevOrders.map(order => 
-            order.id === orderId 
-              ? { ...order, status: "CANCELLED" }
-              : order
-          )
-        );
-        
-        alert("Order cancelled successfully!");
-      } else {
-        alert(data.msg || "Failed to cancel order. Please try again.");
-      }
-    } catch (err) {
-      console.error("Cancel error:", err);
-      alert("An error occurred. Please try again.");
-    } finally {
-      setCancellingOrder(null);
+      alert("Order cancelled successfully!");
+    } else {
+      alert(data.message || data.msg || "Failed to cancel order. Please try again.");
     }
-  };
-
+  } catch (err) {
+    console.error("Cancel error:", err);
+    alert("An error occurred. Please try again.");
+  } finally {
+    setCancellingOrder(null);
+  }
+};
   const fetchOrders = async () => {
     try {
       setLoading(true);

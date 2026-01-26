@@ -68,6 +68,7 @@ export async function POST(req) {
         if (!findAddress) {
             return NextResponse.json({
                 status: "fail",
+                case:"no-address",
                 msg: "Please add a shipping address before placing an order"
             }, { status: 400 });
         } 
